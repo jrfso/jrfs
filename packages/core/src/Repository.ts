@@ -16,6 +16,7 @@ import type {
   DriverTypes,
   TransactionOutParams,
 } from "@/Driver";
+import type { FileCacheProvider } from "@/FileCacheProvider";
 import { FileTree } from "@/FileTree";
 import { FileTypeProvider } from "@/FileTypeProvider";
 import { type CreateShortIdFunction, createShortId } from "@/helpers";
@@ -47,12 +48,14 @@ export class Repository<
     : Driver<FT>,
 > extends FileTree {
   #driver: Driver<FT>;
+  #fileCache?: FileCacheProvider;
   #fileTypes: FileTypeProvider<FT>;
 
   constructor(
     options: RepositoryOptions<FT, DK> & Partial<Pick<DriverTypeOptions, DK>>,
   ) {
     super();
+    this.#fileCache = options.fileCache;
     this.#fileTypes = options.fileTypes;
     const driverType = options.driver;
     const driverFactory = driverFactories[driverType];
@@ -77,6 +80,10 @@ export class Repository<
   /** The driver interface of the configured implementation. */
   get driver(): DT {
     return this.#driver as DT;
+  }
+
+  get fileCache() {
+    return this.#fileCache;
   }
 
   get fileTypes() {
@@ -169,15 +176,35 @@ export class Repository<
     );
   }
 
-  async get(entry: EntryOrPath) {
-    const { path: from, node: fromNode } = this.fileEntry(entry);
+  async get(target: EntryOrPath) {
+    const { path: from, node: fromNode } = this.fileEntry(target);
+    const { entry } = fromNode;
+    // Cached with node? (On server / Already retrieved registered JSON type.)
     if (typeof fromNode.data !== "undefined") {
       return {
-        entry: fromNode.entry,
+        entry,
         data: fromNode.data,
       };
     }
-    return this.driver.get({ from, fromEntry: fromNode.entry });
+    // In FileCacheProvider? (Unregistered )
+    const fileCache = this.fileCache;
+    const caching = !!fileCache;
+    const cached = caching ? await fileCache.get(entry.id) : undefined;
+    if (cached && cached.ctime === entry.ctime) {
+      return {
+        entry,
+        data: cached.data,
+      };
+    }
+    const result = await this.driver.get({ from, fromEntry: entry });
+    if (caching) {
+      const { data, entry } = result;
+      fileCache.set(entry.id, {
+        ctime: entry.ctime,
+        data,
+      });
+    }
+    return result;
   }
 
   async move(
@@ -399,6 +426,7 @@ export interface RepositoryOptions<
 > {
   /** Name of the driver type to use. */
   driver: DK;
+  fileCache?: FileCacheProvider;
   fileTypes: FileTypeProvider<FT>;
   /** Provide a unique short id generator to create node ids. */
   createShortId?: CreateShortIdFunction;
