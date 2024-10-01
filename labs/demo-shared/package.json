@@ -8,7 +8,7 @@
   "types": "./lib/index.d.ts",
   "exports": {
     ".": "./lib/",
-    "./*": "./lib/*",
+    "./*": "./lib/*.js",
     "./features": "./lib/features/",
     "./features/*": "./lib/features/*/index.js",
     "./platform": "./lib/platform/",
@@ -29,7 +29,9 @@
     "rm-build": "shx rm -rf lib/*",
     "watch-build": "node --watch-path=./src ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
-  "dependencies": {},
+  "dependencies": {
+    "nanoid": "^5.0.7"
+  },
   "devDependencies": {
     "@sinclair/typebox": "^0.33.7",
     "@jrfs/core": "*",

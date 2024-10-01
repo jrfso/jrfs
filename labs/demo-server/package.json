@@ -69,7 +69,6 @@
     "glob": "^10.4.1",
     "mime-types": "^2.1.35",
     "mutative": "1.0.11",
-    "nanoid": "^5.0.7",
     "object-hash": "^3.0.0",
     "slugify": "^1.6.6",
     "tinybase": "^5.3.1",

@@ -1,9 +1,7 @@
-import { customAlphabet } from "nanoid";
 import { Repository } from "@jrfs/node";
 import { TypeboxFileTypes } from "@jrfs/typebox";
 import { ProjectFileTypes } from "demo-shared/platform/project";
-
-const createShortId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 9);
+import { createShortId } from "demo-shared/jrfs";
 
 export class ProjectRepo extends Repository<ProjectFileTypes, "fs"> {
   // readonly server: Server<ProjectFileTypes>;
