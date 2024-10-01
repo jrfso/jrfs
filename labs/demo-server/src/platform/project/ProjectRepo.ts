@@ -1,0 +1,18 @@
+import { Repository } from "jrfs/core";
+import { TypeboxFileTypes } from "jrfs/typebox";
+import { ProjectFileTypes } from "demo-shared/platform/project";
+
+export class ProjectRepo extends Repository<ProjectFileTypes, "fs"> {
+  // readonly server: Server<ProjectFileTypes>;
+
+  constructor(configFilePath: string) {
+    super({
+      driver: "fs",
+      fs: configFilePath,
+      fileTypes: new TypeboxFileTypes(),
+    });
+    (this as any)[Symbol.toStringTag] = `ProjectRepo("${configFilePath}")`;
+    this.fileTypes.set(ProjectFileTypes);
+    // this.server = new Server<ProjectFileTypes>(this);
+  }
+}

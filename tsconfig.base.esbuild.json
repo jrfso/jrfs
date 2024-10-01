@@ -1,0 +1,49 @@
+  {
+    "$schema": "https://json.schemastore.org/tsconfig",
+    "compilerOptions": {
+      // #region ESBuild Environment
+      // - Our backend package build scripts use esbuild.
+      // - We use a version of esbuild compatible with what vite depends on.
+      "lib": [
+        "ES2023"
+      ],
+      "module": "ESNext",
+      "target": "ES2022",
+      "strict": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "moduleResolution": "Bundler",
+      // #endregion
+      //
+      // #region Compile a "type": "module" package.json (ESM):
+      "esModuleInterop": false,
+      "resolveJsonModule": false,
+      "isolatedModules": true,
+      // #endregion
+      //
+      // #region Compile package.json (CommonJS):
+      // "esModuleInterop": true,
+      // "importHelpers": true,
+      // #endregion
+      //
+      // Miscellaneous compilerOptions:
+
+      "allowJs": true,
+      "allowSyntheticDefaultImports": true,
+      "declaration": false,
+      "newLine": "lf",
+      // "noEmitOnError": true,
+      // "noFallthroughCasesInSwitch": true,
+      "noImplicitOverride": true,
+      // "noImplicitReturns": true,
+      "noUncheckedIndexedAccess": true,
+      "noUnusedLocals": false,
+      // "noUnusedParameters": true,
+      // "noImplicitAny": true,
+      // "resolveJsonModule": true,
+      "skipDefaultLibCheck": true,
+      "sourceMap": true,
+      "noErrorTruncation": true,
+      // "stripInternal": true,
+    }
+  }

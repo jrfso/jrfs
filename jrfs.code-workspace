@@ -1,0 +1,59 @@
+{
+  "folders": [
+    {
+      "name": "jrfs-root",
+      "path": "./"
+    },
+    {
+      "path": "docs"
+    },
+    {
+      "name": "packages/jrfs",
+      "path": "packages/jrfs"
+    },
+    {
+      "name": "labs/demo-app",
+      "path": "labs/demo-app"
+    },
+    {
+      "name": "labs/demo-server",
+      "path": "labs/demo-server"
+    },
+    {
+      "name": "labs/demo-shared",
+      "path": "labs/demo-shared"
+    },
+    {
+      "name": "labs/designer-files",
+      "path": "labs/designer-files"
+    },
+  ],
+  // Settings to apply when VS Code is started with this `.code-workspace`
+  // file. Each of the workspace folders above can also have their own
+  // settings in a `.vscode/` subdirectory. Those settings are applied
+  // whether VS Code started with this `code-workspace` file OR if VS Code
+  // opened the subdirectory directly.
+  "settings": {
+    // Files to exclude from the main "./" folder above.
+    "files.exclude": {
+      "labs/": true,
+      "docs/": true,
+      "packages/": true,
+    },
+    "search.exclude": {
+      "package-lock.json": true,
+    },
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      "*.cjs": "${capture}.*",
+      "*.cts": "${capture}.*",
+      "*.json": "${capture}.*",
+      "*.jsx": "${capture}.*",
+      ".env": ".env.*",
+      "*.js": "${capture}.*",
+      "*.mdx": "${capture}.*",
+      "*.ts": "${capture}.*",
+      "*.tsx": "${capture}.*",
+    },
+  },
+}

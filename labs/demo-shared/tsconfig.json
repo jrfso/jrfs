@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.esbuild.json",
+  "compilerOptions": {
+    "outDir": "lib",
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+    }
+  },
+  "include": [
+    "src",
+  ],
+}

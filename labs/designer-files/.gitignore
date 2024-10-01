@@ -1,0 +1,7 @@
+# See https://help.github.com/articles/ignoring-files/ for help.
+
+# Dependencies
+node_modules/
+
+# Misc
+.DS_Store

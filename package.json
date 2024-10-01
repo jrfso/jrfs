@@ -1,0 +1,50 @@
+{
+  "name": "jrfs-root",
+  "version": "1.0.0",
+  "description": "JRFS monorepo workspace",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "./packages/*",
+    "./labs/*"
+  ],
+  "scripts": {
+    "audit": "NODE_ENV=production npm audit",
+    "build": "npm run build --ws --if-present",
+    "format": "npm run format --ws --if-present",
+    "imguri": "datauri",
+    "lint": "npm run lint --ws --if-present",
+    "lint-ts": "npm run lint-ts --ws --if-present",
+    "rand": "cat /dev/urandom | tr -dc _A-Z-a-z-0-9 | head -c${C:-32};echo;",
+    "rand-help": "echo 'Change count by running `C=21 npm run rand`'",
+    "test": "vitest run",
+    "watch-test": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "@typescript-eslint/eslint-plugin": "^7.11.0",
+    "@typescript-eslint/parser": "^7.11.0",
+    "datauri-cli": "^4.1.0",
+    "delay-cli": "^2.0.0",
+    "esbuild": "^0.21.3",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-node": "^11.1.0",
+    "glob": "^10.4.1",
+    "minimist": "^1.2.8",
+    "nodemon": "^3.1.4",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.3.3",
+    "shelljs": "^0.8.5",
+    "shx": "^0.3.4",
+    "tsc-alias": "^1.8.10",
+    "typescript": "^5.5.4",
+    "vite-tsconfig-paths": "^5.0.1",
+    "vitest": "^2.0.5"
+  },
+  "prettier": {
+    "trailingComma": "all",
+    "proseWrap": "always"
+  }
+}

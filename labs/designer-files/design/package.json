@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/package",
+  "name": "design-files",
+  "private": true,
+  "license": "MIT",
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}

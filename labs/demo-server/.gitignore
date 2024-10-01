@@ -1,0 +1,7 @@
+# See https://help.github.com/articles/ignoring-files/ for help.
+
+# Build
+/dist/
+
+# Misc
+/tmp/

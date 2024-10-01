@@ -1,0 +1,10 @@
+{
+  "db": {
+    "name": "maing",
+    "preferredDialect": "mysql",
+    "mysql": {
+      "currency": "DECIMAL(10, 2)"
+    },
+    "dialect": "sqlite"
+  }
+}
