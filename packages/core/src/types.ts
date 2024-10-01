@@ -72,12 +72,13 @@ export type Entry = Readonly<NodeEntry>;
 export type EntryOfId = Pick<Entry, "id">;
 
 export type EntryOrPath = EntryOfId | string;
-
+/**
+ * Parameter of an `Entry{id}` or just an `string` id.
+ *
+ * NOTE: Uses `EntryOfId` instead of `Entry`, to enforce non-usage of fields
+ * other than `id` when an `Entry` is given as a parameter to a public method.
+ */
 export type EntryOrId = EntryOfId | string;
-
-export function idOrEntryId(value: EntryOrId) {
-  return typeof value === "string" ? value : value.id;
-}
 
 /** Extended file-system node details. */
 export interface NodeInfo extends NodeEntry {
@@ -133,6 +134,10 @@ export type NodeVisitResult = boolean | undefined | void;
 export function getCtimeOption(stats: NodeOptions["stats"]) {
   const ctime = stats.ctime;
   return typeof ctime === "number" ? ctime : ctime.getTime();
+}
+
+export function idOrEntryId(value: EntryOrId) {
+  return typeof value === "string" ? value : value.id;
 }
 
 export function isDirectoryId(id: string): boolean {
