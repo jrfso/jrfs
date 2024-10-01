@@ -48,6 +48,9 @@ export class Repository<
     : Driver<FT>,
 > extends FileTree {
   #driver: Driver<FT>;
+
+  // TODO: Move #fileCache to FileTree so it can be used by WritableFileTree.
+
   #fileCache?: FileCacheProvider;
   #fileTypes: FileTypeProvider<FT>;
 
@@ -186,20 +189,22 @@ export class Repository<
         data: fromNode.data,
       };
     }
-    // In FileCacheProvider? (Unregistered )
+    // In cache?
     const fileCache = this.fileCache;
     const caching = !!fileCache;
-    const cached = caching ? await fileCache.get(entry.id) : undefined;
-    if (cached && cached.ctime === entry.ctime) {
+    const cached = caching ? await fileCache.getData(entry) : undefined;
+    if (cached) {
       return {
         entry,
-        data: cached.data,
+        data: cached,
       };
     }
+    // Get from driver.
     const result = await this.driver.get({ from, fromEntry: entry });
+    // Cache from driver?
     if (caching) {
       const { data, entry } = result;
-      fileCache.set(entry.id, {
+      fileCache.set(entry, {
         ctime: entry.ctime,
         data,
       });

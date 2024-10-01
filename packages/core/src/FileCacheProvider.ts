@@ -1,12 +1,15 @@
+import type { Entry, EntryOrId } from "@/types";
+
 export interface FileCacheItem {
   ctime: number;
   data: unknown;
 }
 
 export interface FileCacheProvider {
-  get(id: string): Promise<FileCacheItem>;
-  set(id: string, value: FileCacheItem): Promise<FileCacheItem>;
-  delete(id: string): Promise<void>;
+  get(entryOrId: EntryOrId): Promise<FileCacheItem>;
+  getData<T = unknown>(entry: Entry): Promise<T | undefined>;
+  set<T = unknown>(entry: Entry, data: T): Promise<FileCacheItem>;
+  delete(entryOrId: EntryOrId): Promise<void>;
   clear(): Promise<void>;
   keys(): Promise<string[]>;
 }

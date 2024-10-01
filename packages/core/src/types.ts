@@ -75,6 +75,10 @@ export type EntryOrPath = EntryOfId | string;
 
 export type EntryOrId = EntryOfId | string;
 
+export function idOrEntryId(value: EntryOrId) {
+  return typeof value === "string" ? value : value.id;
+}
+
 /** Extended file-system node details. */
 export interface NodeInfo extends NodeEntry {
   /** The number of children. */
