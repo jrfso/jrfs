@@ -1,4 +1,4 @@
-import "jrfs/node";
+import "@jrfs/node";
 
 export * from "./project/ProjectRepo";
 export * from "./project/projectService";
