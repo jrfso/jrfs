@@ -4,14 +4,16 @@ import {
   type WritableFileTree,
   // logFileTreeChange,
 } from "@jrfs/core";
-import {
-  type AnyRequest,
-  type DataResult,
-  type ServerMessage,
-  type TransactionResult,
-  isResponse,
-  requestTo,
-} from "@/types";
+import type {
+  AnyRequest,
+  AnyResponse,
+  BaseRequest,
+  DataResult,
+  MethodInfo,
+  Requesting,
+  ServerMessage,
+  TransactionResult,
+} from "@jrfs/core/web/types";
 
 const REQUEST_TIMEOUT_MS = 30000;
 
@@ -249,4 +251,18 @@ export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
     },
   };
   return client;
+}
+
+export function isResponse(msg: ServerMessage): msg is AnyResponse {
+  return "rx" in msg;
+}
+export function requestTo<
+  T extends Requesting,
+  O extends MethodInfo[T]["request"]["of"] = MethodInfo[T]["request"]["of"],
+>(method: T, rx: number, params: O): BaseRequest<T, O> {
+  return {
+    rx,
+    to: method,
+    of: params,
+  };
 }

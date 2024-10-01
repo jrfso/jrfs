@@ -1,4 +1,4 @@
-import type { FileTreeChange, MutativePatches } from "@jrfs/core";
+import type { FileTreeChange, MutativePatches } from "@/index";
 
 // -- Notifications
 
@@ -122,16 +122,6 @@ export interface Notice<T extends Notifying = Notifying, O = unknown> {
 export type Notifications = {
   [K in Notifying]: Notice<K, NotificationParams[K]>;
 };
-
-export function notifyOf<T extends Notifying, O = NotificationParams[T]>(
-  type: T,
-  event: O,
-): Notice<T, O> {
-  return {
-    to: type,
-    of: event,
-  };
-}
 // #endregion
 // #region -- Methods `[Request] + [Response]`
 
@@ -169,42 +159,5 @@ export type MethodInfo = {
 /** Response archetype. */
 export type Responding = "ok" | "error";
 
-export function isResponse(msg: ServerMessage): msg is AnyResponse {
-  return "rx" in msg;
-}
-
-export function requestTo<
-  T extends Requesting,
-  O extends MethodInfo[T]["request"]["of"] = MethodInfo[T]["request"]["of"],
->(method: T, rx: number, params: O): BaseRequest<T, O> {
-  return {
-    rx,
-    to: method,
-    of: params,
-  };
-}
-
-export function respondTo<
-  T extends Requesting,
-  R extends Responding = "ok",
-  O = MethodInfo[T]["response"]["of"] | undefined,
->(method: T, type: R, rx: number, content: O): BaseResponse<R, O> {
-  return {
-    rx,
-    to: type,
-    of: content,
-  };
-}
-
-export function respondTx(
-  rx: number,
-  content: TransactionResult,
-): BaseResponse<"ok", TransactionResult> {
-  return {
-    rx,
-    to: "ok",
-    of: content,
-  };
-}
 // #endregion
 // #endregion

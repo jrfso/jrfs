@@ -7,14 +7,19 @@ import {
   type TransactionOutParams,
   logFileTreeChange,
 } from "@jrfs/core";
-import {
-  type AnyRequest,
-  type Requesting,
-  type RequestParams,
-  type ServerMessage,
-  notifyOf,
-  respondTo,
-} from "@jrfs/web/types";
+import type {
+  AnyRequest,
+  BaseResponse,
+  MethodInfo,
+  Notice,
+  NotificationParams,
+  Notifying,
+  Requesting,
+  RequestParams,
+  Responding,
+  ServerMessage,
+  TransactionResult,
+} from "@jrfs/core/web/types";
 
 interface ClientInfo {
   id: string;
@@ -217,6 +222,39 @@ function logSendError(error?: Error) {
       "[WS] send " + error + (error.stack ? "\n" + error.stack : ""),
     );
   }
+}
+
+export function notifyOf<T extends Notifying, O = NotificationParams[T]>(
+  type: T,
+  event: O,
+): Notice<T, O> {
+  return {
+    to: type,
+    of: event,
+  };
+}
+
+export function respondTo<
+  T extends Requesting,
+  R extends Responding = "ok",
+  O = MethodInfo[T]["response"]["of"] | undefined,
+>(method: T, type: R, rx: number, content: O): BaseResponse<R, O> {
+  return {
+    rx,
+    to: type,
+    of: content,
+  };
+}
+
+export function respondTx(
+  rx: number,
+  content: TransactionResult,
+): BaseResponse<"ok", TransactionResult> {
+  return {
+    rx,
+    to: "ok",
+    of: content,
+  };
 }
 
 function send(socket: WebSocket, msg: ServerMessage) {
