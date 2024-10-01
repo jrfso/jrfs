@@ -18,36 +18,87 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
       db.createObjectStore(store);
     },
   });
+  const writing = new Map<string, Promise<void>>();
+
+  function doneWriting(id: string, next: () => void) {
+    writing.delete(id);
+    next();
+  }
+
+  function startWriting(id: string) {
+    let callbacks!: PromiseCallbacks;
+    writing.set(
+      id,
+      new Promise<void>((resolve, reject) => {
+        callbacks = [resolve, reject];
+      }),
+    );
+    return callbacks;
+  }
+  /**
+   * This function is needed since WritableFileTree writes are synchronous, so
+   * they don't wait for FileCache write operations to finish. Meanwhile, any
+   * functions that READ from FileCache will certainly wait for the result and
+   * therefore, we will make them wait until writes are finished before reading.
+   *
+   * However, we do not block writes while reading and we depend on IDB to sync.
+   */
+  async function waitIfWriting(id: string) {
+    const writer = writing.get(id);
+    if (!writer) return;
+    await writer;
+  }
+
   const fileCache: FileCacheProvider = {
-    get(entryOrId) {
+    async get(entryOrId) {
       const id = idOrEntryId(entryOrId);
+      await waitIfWriting(id);
       return db.get(store, id);
     },
     async getData<T = unknown>(entry: Entry): Promise<T | undefined> {
       const { id, ctime } = entry;
+      await waitIfWriting(id);
       // Cached item?
       const item = (await db.get(store, id)) as FileCacheItem;
       if (!item) return undefined;
       // Matches current timestamp?
       if (item.ctime !== ctime) {
         // Prune expired item immediately.
-        await db.delete(store, id);
+        console.warn(`[JRFS] IDB FileCache item was out of sync "${id}".`);
+        await fileCache.delete(id);
         return undefined;
       }
       // Return cached data.
       return item.data as T;
     },
     async set(entry, data) {
+      const { id, ctime } = entry;
+      await waitIfWriting(id);
+      const [resolve, reject] = startWriting(id);
       const item: FileCacheItem = {
-        ctime: entry.ctime,
+        ctime,
         data,
       };
-      await db.put(store, item, entry.id);
+      try {
+        await db.put(store, item, id);
+      } catch (ex) {
+        doneWriting(id, () => reject(ex));
+        throw ex;
+      }
+      doneWriting(id, resolve);
       return item;
     },
-    delete(entryOrId) {
+    async delete(entryOrId) {
       const id = idOrEntryId(entryOrId);
-      return db.delete(store, id);
+      await waitIfWriting(id);
+      const [resolve, reject] = startWriting(id);
+      try {
+        await db.delete(store, id);
+      } catch (ex) {
+        doneWriting(id, () => reject(ex));
+        throw ex;
+      }
+      doneWriting(id, resolve);
     },
     clear() {
       return db.clear(store);
@@ -58,3 +109,6 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
   };
   return fileCache;
 }
+
+/** `[resolve, reject]` */
+type PromiseCallbacks = [(result?: any) => void, (reason?: any) => void];

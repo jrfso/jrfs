@@ -11,6 +11,7 @@ import {
   NoChildren,
   DirectoryNode,
   NodeNotFoundError,
+  FileNode,
   FileTreeRoot,
   FileTreeInternal,
   FileTreeNodes,
@@ -70,6 +71,7 @@ export class WritableFileTree extends FileTree {
     super(baseTree);
     // We MUST forward state changes to #base. See setRootNode, setTx, etc.
     this.#base = baseTree[INTERNAL];
+    console.assert(this.cache === baseTree.cache, "Cache should match.");
     console.assert(this.nodes === this.#base.nodes, "Nodes should match.");
     console.assert(this.root === this.#base.root, "Root should match.");
     this.#createShortId = createShortId;
@@ -211,9 +213,10 @@ export class WritableFileTree extends FileTree {
       data?: unknown;
     },
   ): Node {
-    const { nodes } = this;
+    const { cache, nodes } = this;
     const { entry, children, data } = props;
     const id = orig.entry.id;
+    const dataChanging = "data" in props;
     const node: Node = Object.freeze(
       Object.assign(
         {
@@ -230,12 +233,27 @@ export class WritableFileTree extends FileTree {
                 : orig.children,
             }
           : isFileNode(orig)
-            ? { data: "data" in props ? deepFreeze(data) : orig.data }
+            ? { data: dataChanging ? deepFreeze(data) : orig.data }
             : undefined,
       ),
     );
     nodes.set(id, node);
-    // Manage effects
+    /**
+     * Manage effects
+     *
+     * We're NOT WAITING for any FileCacheProvider promises here since we don't
+     * want to make this an async function.
+     *
+     * Therefore, all FileCacheProvider implementations MUST block readers
+     * while writing.
+     */
+    if (dataChanging && cache) {
+      if (typeof data !== "undefined") {
+        cache.set(node.entry, (node as FileNode).data);
+      } else {
+        cache.delete(node.entry);
+      }
+    }
     if (entry) {
       const entry = node.entry;
       if (orig.entry.pId !== entry.pId) {
@@ -698,7 +716,7 @@ export class WritableFileTree extends FileTree {
     params: FileTreeWriteParams,
     out?: TransactionOutParams,
   ): Entry {
-    const { data, stats } = params;
+    const { data, patch, stats } = params;
     let node = this.#getNode(entry);
     if (!node) {
       // TODO: Use a node getter that just does this automatically...
@@ -708,12 +726,11 @@ export class WritableFileTree extends FileTree {
       data,
       entry: { ctime: getCtimeOption(stats) },
     });
-    // CONSIDER: Send patches with this file change?
     const change: FileTreeChange = {
       op: "write",
       id: node.entry.id,
       changed: [node.entry],
-      patch: params.patch,
+      patch,
       tx: this.#nextTx(),
     };
     if (out) {
