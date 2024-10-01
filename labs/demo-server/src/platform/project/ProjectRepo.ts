@@ -1,7 +1,9 @@
-import { Repository } from "jrfs/core";
-import { createShortId } from "jrfs/nanoid";
-import { TypeboxFileTypes } from "jrfs/typebox";
+import { customAlphabet } from "nanoid";
+import { Repository } from "@jrfs/node";
+import { TypeboxFileTypes } from "@jrfs/typebox";
 import { ProjectFileTypes } from "demo-shared/platform/project";
+
+const createShortId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 9);
 
 export class ProjectRepo extends Repository<ProjectFileTypes, "fs"> {
   // readonly server: Server<ProjectFileTypes>;

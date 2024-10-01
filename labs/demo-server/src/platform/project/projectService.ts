@@ -1,5 +1,5 @@
 import Path from "node:path";
-import { createWsServer } from "jrfs/ws";
+import { createWsServer } from "@jrfs/ws";
 // Local
 import { __DEV__ } from "@/config";
 import { ProjectRepo } from "@/platform";

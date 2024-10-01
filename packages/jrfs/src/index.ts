@@ -1,3 +1,0 @@
-// NOTE: Exporting nothing for now, using ESM export for subfolders...
-
-export default {};

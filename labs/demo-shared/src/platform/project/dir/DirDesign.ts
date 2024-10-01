@@ -1,4 +1,4 @@
-import { Maybe, Static, Type, define } from "jrfs/typebox";
+import { Maybe, Static, Type, define } from "@jrfs/typebox";
 
 /** Directory layout type-schema + */
 export const DirModel = Type.Object(

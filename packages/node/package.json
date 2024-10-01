@@ -1,18 +1,25 @@
 {
-  "name": "demo-shared",
-  "private": true,
+  "name": "@jrfs/node",
   "version": "0.0.1",
-  "description": "Code shared between demo-app and demo-server.",
+  "description": "JRFS Node drivers.",
+  "repository": "github:jrfso/jrfs",
+  "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/node",
+  "keywords": [
+    "json",
+    "fs",
+    "filesystem",
+    "websocket",
+    "websockets"
+  ],
   "license": "MIT",
+  "engines": {
+    "node": "^18.18.0 || >=20.0.0"
+  },
   "type": "module",
   "types": "./lib/index.d.ts",
   "exports": {
-    ".": "./lib/",
-    "./*": "./lib/*",
-    "./features": "./lib/features/",
-    "./features/*": "./lib/features/*/index.js",
-    "./platform": "./lib/platform/",
-    "./platform/*": "./lib/platform/*/index.js"
+    ".": "./lib/index.js",
+    "./*": "./lib/*.js"
   },
   "files": [
     "lib",
@@ -29,15 +36,7 @@
     "rm-build": "shx rm -rf lib/*",
     "watch-build": "node --watch-path=./src ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
-  "dependencies": {},
-  "devDependencies": {
-    "@sinclair/typebox": "^0.33.7",
-    "@jrfs/core": "*",
-    "@jrfs/typebox": "*"
-  },
-  "peerDependencies": {
-    "@sinclair/typebox": "^0.33.7",
-    "@jrfs/core": "*",
-    "@jrfs/typebox": "*"
+  "dependencies": {
+    "@jrfs/core": "^0.0.1"
   }
 }

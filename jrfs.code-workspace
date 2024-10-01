@@ -1,15 +1,31 @@
 {
   "folders": [
     {
-      "name": "jrfs-root",
+      "name": "jrfs",
       "path": "./"
     },
     {
       "path": "docs"
     },
     {
-      "name": "packages/jrfs",
-      "path": "packages/jrfs"
+      "name": "core",
+      "path": "packages/core"
+    },
+    {
+      "name": "node",
+      "path": "packages/node"
+    },
+    {
+      "name": "typebox",
+      "path": "packages/typebox"
+    },
+    {
+      "name": "web",
+      "path": "packages/web"
+    },
+    {
+      "name": "ws",
+      "path": "packages/ws"
     },
     {
       "name": "labs/demo-app",

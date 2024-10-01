@@ -1,9 +1,9 @@
 import type { OpenAPIV3_1 } from "openapi-types";
 // Local
 import type { WebApi } from "../services/webServer";
-import { Maybe, Static, Type, define } from "jrfs/typebox";
+import { Maybe, Static, Type, define } from "@jrfs/typebox";
 
-export * from "jrfs/typebox";
+export * from "@jrfs/typebox";
 
 // TODO: Replace our ServerError with @fastify/sensible
 

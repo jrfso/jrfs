@@ -1,13 +1,14 @@
 import { ProjectFileTypes } from "demo-shared/platform/project";
+import { customAlphabet } from "nanoid";
 // Local
-import { Repository } from "jrfs/core";
-import { createShortId } from "jrfs/nanoid";
-import { createWebClient } from "jrfs/web";
-import { TypeboxFileTypes } from "jrfs/typebox";
+import { createWebClient, Repository } from "@jrfs/web";
+import { TypeboxFileTypes } from "@jrfs/typebox";
 
 const client = createWebClient<ProjectFileTypes>({
   ws: "ws://localhost:40141/sockets/v1/project/repo/fs",
 });
+
+const createShortId = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 9);
 
 export { ProjectFileTypes };
 

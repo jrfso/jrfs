@@ -1,4 +1,4 @@
-import { Maybe, Static, Type, define } from "jrfs/typebox";
+import { Maybe, Static, Type, define } from "@jrfs/typebox";
 
 export const DbModelMysql = Type.Object(
   {

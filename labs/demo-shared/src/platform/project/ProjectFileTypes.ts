@@ -1,4 +1,4 @@
-import type { FileTypeInfo } from "jrfs/core";
+import type { FileTypeInfo } from "@jrfs/core";
 
 /** File-types extended via `declare module` + */
 export interface ProjectFileTypes {

@@ -1,5 +1,5 @@
-import { Maybe, Static, StringEnum, Type, define } from "jrfs/typebox";
-import type { FileOf, FileTypeInfo } from "jrfs/core";
+import { Maybe, Static, StringEnum, Type, define } from "@jrfs/typebox";
+import type { FileOf, FileTypeInfo } from "@jrfs/core";
 import { ProjectFileTypes } from "@/platform/project";
 import { DirDesignMeta } from "@/platform/project/dir";
 import { DbModelMysql } from "./mysql";

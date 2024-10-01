@@ -1,18 +1,24 @@
 {
-  "name": "demo-shared",
-  "private": true,
+  "name": "@jrfs/ws",
   "version": "0.0.1",
-  "description": "Code shared between demo-app and demo-server.",
+  "description": "JRFS ws integration.",
+  "repository": "github:jrfso/jrfs",
+  "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/ws",
+  "keywords": [
+    "jrfs",
+    "json",
+    "fs",
+    "filesystem",
+    "websocket",
+    "websockets",
+    "ws"
+  ],
   "license": "MIT",
   "type": "module",
   "types": "./lib/index.d.ts",
   "exports": {
-    ".": "./lib/",
-    "./*": "./lib/*",
-    "./features": "./lib/features/",
-    "./features/*": "./lib/features/*/index.js",
-    "./platform": "./lib/platform/",
-    "./platform/*": "./lib/platform/*/index.js"
+    ".": "./lib/index.js",
+    "./*": "./lib/*.js"
   },
   "files": [
     "lib",
@@ -29,15 +35,14 @@
     "rm-build": "shx rm -rf lib/*",
     "watch-build": "node --watch-path=./src ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@jrfs/core": "^0.0.1",
+    "@jrfs/web": "^0.0.1"
+  },
   "devDependencies": {
-    "@sinclair/typebox": "^0.33.7",
-    "@jrfs/core": "*",
-    "@jrfs/typebox": "*"
+    "ws": "^8.18.0"
   },
   "peerDependencies": {
-    "@sinclair/typebox": "^0.33.7",
-    "@jrfs/core": "*",
-    "@jrfs/typebox": "*"
+    "ws": "^8.18.0"
   }
 }
