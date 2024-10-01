@@ -5,6 +5,7 @@
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/node",
   "keywords": [
+    "jrfs",
     "json",
     "fs",
     "filesystem",
