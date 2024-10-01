@@ -1,3 +1,14 @@
+const ALPHANUMLOWER = "0123456789abcdefghijklmnopqrstuvwxyz";
+
+export function createShortId(length: number = 9): string {
+  let id = "";
+  for (let i = 0; i < length; i++) {
+    id += ALPHANUMLOWER[Math.floor(Math.random() * ALPHANUMLOWER.length)];
+  }
+  return id;
+}
+export type CreateShortIdFunction = typeof createShortId;
+
 /**
  * Deep `Object.freeze()`, works with Map and Set. From
  * [deep-freeze-es6](https://github.com/christophehurpeau/deep-freeze-es6)

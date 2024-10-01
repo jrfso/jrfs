@@ -1,13 +1,14 @@
 // Local
-import {
-  type Entry,
-  type FileTree,
-  type FileTypeProvider,
-  type FileTypes,
-  type MutativePatches,
-  WritableFileTree,
+import type {
+  Entry,
+  FileTree,
+  FileTypeProvider,
+  FileTypes,
+  MutativePatches,
 } from "@/core";
+import { type CreateShortIdFunction } from "@/core/helpers";
 import { INTERNAL } from "@/core/internal/types";
+import { WritableFileTree } from "@/core/WritableFileTree";
 
 /** Base JRFS driver class. */
 export abstract class Driver<FT extends FileTypes<FT>> {
@@ -17,7 +18,10 @@ export abstract class Driver<FT extends FileTypes<FT>> {
   #opened = false;
 
   constructor(props: DriverProps<FT>) {
-    this.#fileTree = WritableFileTree[INTERNAL].create(props.fileTree);
+    this.#fileTree = WritableFileTree[INTERNAL].create(
+      props.fileTree,
+      props.createShortId,
+    );
     this.#fileTypes = props.fileTypes;
   }
 
@@ -166,6 +170,7 @@ export type DriverFactory = <FT extends FileTypes<FT>>(
 ) => Driver<FT>;
 
 export interface DriverProps<FT extends FileTypes<FT>> {
+  createShortId: CreateShortIdFunction;
   fileTypes: FileTypeProvider<FT>;
   fileTree: FileTree;
 }

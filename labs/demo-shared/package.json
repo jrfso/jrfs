@@ -32,12 +32,10 @@
   "dependencies": {},
   "devDependencies": {
     "@sinclair/typebox": "^0.33.7",
-    "jrfs": "*",
-    "nanoid": "^5.0.7"
+    "jrfs": "*"
   },
   "peerDependencies": {
     "@sinclair/typebox": "^0.33.7",
-    "jrfs": "*",
-    "nanoid": "^5.0.7"
+    "jrfs": "*"
   }
 }

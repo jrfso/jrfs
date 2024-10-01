@@ -1,10 +1,9 @@
 import { apply } from "mutative";
 // Local
-import { deepFreeze } from "@/core/helpers";
+import { type CreateShortIdFunction, deepFreeze } from "@/core/helpers";
 import {
   Node,
   INTERNAL,
-  createNodeId,
   createRoot,
   sortChildren,
   isDirectoryNode,
@@ -58,10 +57,14 @@ export interface FileTreeWriteParams extends FileTreeChangeParams {
 export class WritableFileTree extends FileTree {
   /** Base file tree interface to forward state changes to. */
   #base: FileTreeInternal;
+  #createShortId: CreateShortIdFunction;
   #target: FileTree;
 
   /** Use `WritableFileTree[INTERNAL].create` to create an instance. */
-  private constructor(baseTree: FileTree) {
+  private constructor(
+    baseTree: FileTree,
+    createShortId: CreateShortIdFunction,
+  ) {
     // Our WritableFileTree MUST share state (nodes,root,tx) with the base tree.
     // The `super` constructor will copy the initial references and values.
     super(baseTree);
@@ -69,6 +72,7 @@ export class WritableFileTree extends FileTree {
     this.#base = baseTree[INTERNAL];
     console.assert(this.nodes === this.#base.nodes, "Nodes should match.");
     console.assert(this.root === this.#base.root, "Root should match.");
+    this.#createShortId = createShortId;
     this.#target = baseTree;
   }
 
@@ -80,8 +84,8 @@ export class WritableFileTree extends FileTree {
   // #region -- Internal
   static #internal = {
     /** Creates a new WritableFileTree. */
-    create(baseTree: FileTree) {
-      const writable = new WritableFileTree(baseTree);
+    create(baseTree: FileTree, createShortId: CreateShortIdFunction) {
+      const writable = new WritableFileTree(baseTree, createShortId);
       return writable;
     },
   };
@@ -139,9 +143,8 @@ export class WritableFileTree extends FileTree {
 
   /** Adds node to the tree. */
   #create(name: string, options: NodeOptions): Node {
-    const { nodes } = this;
     const { data, isDir = false, pId, stats } = options ?? {};
-    const id = createNodeId(isDir ? "d" : "f", nodes);
+    const id = createNodeId(isDir ? "d" : "f", this.nodes, this.#createShortId);
     const entry: Entry = {
       id,
       name,
@@ -729,7 +732,11 @@ export class WritableFileTree extends FileTree {
     }
     const items = new Map<string, NodeBuilder>();
     const rootItems: string[] = [];
-    const { builder } = createFileTreeBuilder(items, rootItems);
+    const { builder } = createFileTreeBuilder(
+      items,
+      rootItems,
+      this.#createShortId,
+    );
     const cbResult = await cb(builder);
     for (const [id, item] of items.entries()) {
       // Map to Node
@@ -804,6 +811,7 @@ interface FileTreeBuilder {
 function createFileTreeBuilder(
   nodes: Map<string, NodeBuilder>,
   roots: string[],
+  createShortId: CreateShortIdFunction,
 ) {
   const builder: FileTreeBuilder = {
     tx: 0,
@@ -818,7 +826,11 @@ function createFileTreeBuilder(
       }: NodeOptions,
     ): NodeEntry {
       if (!id) {
-        id = createNodeId(isDir ? "d" : "f", nodes);
+        id = createNodeId(
+          isDir ? "d" : "f",
+          nodes as FileTreeNodes,
+          createShortId,
+        );
       } else if (nodes.has(id)) {
         throw new Error(`Node already exists "${id}"`);
       }
@@ -859,4 +871,16 @@ function createFileTreeBuilder(
   return {
     builder,
   };
+}
+
+function createNodeId(
+  type: "d" | "f",
+  nodes: FileTreeNodes,
+  createShortId: CreateShortIdFunction,
+) {
+  let id = type + createShortId();
+  while (nodes.has(id)) {
+    id = type + createShortId();
+  }
+  return id;
 }

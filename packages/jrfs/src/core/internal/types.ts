@@ -1,5 +1,4 @@
 // Local
-import { createShortId } from "@/core/internal/createShortId";
 import {
   type Entry,
   type EntryOrId,
@@ -64,16 +63,6 @@ export function asNode(node: Node): Node {
 
 export function asNodeInfo(node: NodeInfo): NodeInfo {
   return node;
-}
-
-export function createNodeId(type: "d" | "f", nodes?: Map<string, unknown>) {
-  let id = type + createShortId();
-  if (nodes) {
-    while (nodes.has(id)) {
-      id = type + createShortId();
-    }
-  }
-  return id;
 }
 
 export function createRoot(children: Children = NoChildren) {

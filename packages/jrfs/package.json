@@ -20,6 +20,7 @@
     ".": "./lib/",
     "./*": "./lib/*",
     "./core": "./lib/core/index.js",
+    "./nanoid": "./lib/nanoid/index.js",
     "./node": "./lib/node/index.js",
     "./typebox": "./lib/typebox/index.js",
     "./web": "./lib/web/index.js",

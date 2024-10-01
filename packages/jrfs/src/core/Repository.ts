@@ -18,6 +18,7 @@ import type {
 } from "@/core/Driver";
 import { FileTree } from "@/core/FileTree";
 import { FileTypeProvider } from "@/core/FileTypeProvider";
+import { type CreateShortIdFunction, createShortId } from "@/core/helpers";
 
 // TODO: Binary transactions...
 // - Repository[upload & writeBinary] -> Driver[upload & writeBinary]
@@ -61,6 +62,7 @@ export class Repository<
     const driverOptions = options[driverType];
     const driver = driverFactory<FT>(
       {
+        createShortId: options.createShortId ?? createShortId,
         fileTree: this,
         fileTypes: this.#fileTypes,
       },
@@ -398,6 +400,8 @@ export interface RepositoryOptions<
   /** Name of the driver type to use. */
   driver: DK;
   fileTypes: FileTypeProvider<FT>;
+  /** Provide a unique short id generator to create node ids. */
+  createShortId?: CreateShortIdFunction;
 }
 
 /** Map of registered driver factory functions. */

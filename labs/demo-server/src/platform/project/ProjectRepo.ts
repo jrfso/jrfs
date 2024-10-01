@@ -1,4 +1,5 @@
 import { Repository } from "jrfs/core";
+import { createShortId } from "jrfs/nanoid";
 import { TypeboxFileTypes } from "jrfs/typebox";
 import { ProjectFileTypes } from "demo-shared/platform/project";
 
@@ -7,6 +8,7 @@ export class ProjectRepo extends Repository<ProjectFileTypes, "fs"> {
 
   constructor(configFilePath: string) {
     super({
+      createShortId,
       driver: "fs",
       fs: configFilePath,
       fileTypes: new TypeboxFileTypes(),

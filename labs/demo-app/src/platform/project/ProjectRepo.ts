@@ -1,6 +1,7 @@
 import { ProjectFileTypes } from "demo-shared/platform/project";
 // Local
 import { Repository } from "jrfs/core";
+import { createShortId } from "jrfs/nanoid";
 import { createWebClient } from "jrfs/web";
 import { TypeboxFileTypes } from "jrfs/typebox";
 
@@ -13,6 +14,7 @@ export { ProjectFileTypes };
 export class ProjectRepo extends Repository<ProjectFileTypes, "web"> {
   constructor() {
     super({
+      createShortId,
       driver: "web",
       web: { client },
       fileTypes: new TypeboxFileTypes(),
