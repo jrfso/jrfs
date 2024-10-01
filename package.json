@@ -43,6 +43,9 @@
     "vite-tsconfig-paths": "^5.0.1",
     "vitest": "^2.0.5"
   },
+  "overrides": {
+    "minimist": "^1.2.8"
+  },
   "prettier": {
     "trailingComma": "all",
     "proseWrap": "always"
