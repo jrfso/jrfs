@@ -1,10 +1,12 @@
+import { createFileCache } from "@jrfs/idb";
 // Local
 import { ProjectRepo } from "./ProjectRepo";
 
 export async function openRepo() {
   console.log("openRepo");
 
-  const repo = new ProjectRepo();
+  const cache = await createFileCache();
+  const repo = new ProjectRepo({ cache });
 
   await repo.open();
 

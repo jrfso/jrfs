@@ -1,7 +1,7 @@
 import { ProjectFileTypes } from "demo-shared/platform/project";
 import { createShortId } from "demo-shared/jrfs";
 // Local
-import { createWebClient, Repository } from "@jrfs/web";
+import { createWebClient, FileCacheProvider, Repository } from "@jrfs/web";
 import { TypeboxFileTypes } from "@jrfs/typebox";
 
 const client = createWebClient<ProjectFileTypes>({
@@ -11,10 +11,11 @@ const client = createWebClient<ProjectFileTypes>({
 export { ProjectFileTypes };
 
 export class ProjectRepo extends Repository<ProjectFileTypes, "web"> {
-  constructor() {
+  constructor({ cache }: { cache: FileCacheProvider }) {
     super({
       createShortId,
       driver: "web",
+      fileCache: cache,
       web: { client },
       fileTypes: new TypeboxFileTypes(),
     });
