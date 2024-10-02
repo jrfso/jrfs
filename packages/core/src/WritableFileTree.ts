@@ -27,6 +27,7 @@ import {
   NodeOptions,
   getCtimeOption,
   isDirectoryId,
+  isFileId,
 } from "@/types";
 import type { TransactionOutParams } from "./Driver";
 import { FileTree } from "./FileTree";
@@ -103,7 +104,7 @@ export class WritableFileTree extends FileTree {
     parentNode?: DirectoryNode,
     data?: unknown,
   ): Node {
-    const { nodes } = this;
+    const { cache, nodes } = this;
     const { id } = entry;
     // Create
     const node: Node = isDir
@@ -116,6 +117,10 @@ export class WritableFileTree extends FileTree {
           data: deepFreeze(data),
         };
     nodes.set(id, Object.freeze(node));
+    // Cache data
+    if (!isDir && cache && typeof data !== "undefined") {
+      cache.set(node.entry, (node as FileNode).data);
+    }
     // Add to parent
     this.#addToParent(entry, parentNode);
     return node;
@@ -598,11 +603,22 @@ export class WritableFileTree extends FileTree {
     }
     const id = node.entry.id;
     // Delete node children.
-    const { nodes } = this;
+    const { cache, nodes } = this;
     /** Removal entries in order from children to parents. */
     const removals: Entry[] = isDirectoryNode(node)
       ? this.descendants(node.entry).reverse()
       : [];
+    let cacheTask: Promise<any> | undefined;
+    // Uncache removed files
+    if (cache) {
+      for (const child of removals) {
+        if (isFileId(child.id)) {
+          cacheTask = cacheTask
+            ? cacheTask.then(() => cache.delete(child.id))
+            : cache.delete(child.id);
+        }
+      }
+    }
     for (const child of removals) {
       // console.log("DELETING", childId, child.name);
       nodes.delete(child.id);
@@ -612,6 +628,11 @@ export class WritableFileTree extends FileTree {
     this.#disconnect(node);
     nodes.delete(id);
     removals.push(node.entry);
+    if (cache) {
+      cacheTask = cacheTask
+        ? cacheTask.then(() => cache.delete(id))
+        : cache.delete(id);
+    }
     const change: FileTreeChange = {
       op: "remove",
       id,
@@ -745,7 +766,7 @@ export class WritableFileTree extends FileTree {
   // #region -- Tree Actions
   /** Builds the tree from source. */
   async build<T>(cb: (builder: FileTreeBuilder) => Promise<T>): Promise<T> {
-    const nodes = this.nodes;
+    const { nodes } = this;
     if (nodes.size > 0) {
       throw new Error(`The FileTree is not empty!`);
     }
@@ -777,6 +798,22 @@ export class WritableFileTree extends FileTree {
       );
       // Add
       nodes.set(id, node);
+      // Cache data (no need atm, see below)
+      //if (this.cache && typeof node.data !== "undefined") {
+      //
+      //// NOTE: This is never called in our current setup! (No cache on server,
+      //// FsDriver uses build method, WebClient uses open method, not build.
+      ////
+      //// NOTE: For merging with open...
+      ////
+      //// The call to #addEntry does this for us in our open method.
+      //// However that method is not async! So we should be careful how many
+      //// cache writes we send at once.
+      //// CONSIDER: One idea is to chain the promises so they run sequentially,
+      //// e.g. task = task.then(() => cache.set(node.entry, node.data));
+      //// like we do in #removeEntry...
+      //
+      //await cache.set(node.entry, node.data);}
     }
     const rootChildren = sortChildren(rootItems, items as FileTreeNodes);
     this.setRootNode(createRoot(rootChildren));
@@ -784,7 +821,7 @@ export class WritableFileTree extends FileTree {
     return cbResult;
   }
 
-  // CONSIDER: Merge build and open methods, they do the same thing...
+  // CONSIDER: Merge build and open methods, they do the same thing.
 
   open(params: { entries: Entry[]; tx: number }) {
     const { entries, tx } = params;
