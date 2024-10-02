@@ -192,10 +192,6 @@ export class Repository<
     }
     // Get from driver.
     const result = await this.driver.get({ from, fromEntry: entry });
-    // Cache from driver?
-    if (caching) {
-      cache.set(result.entry, result.data);
-    }
     return result;
   }
 
