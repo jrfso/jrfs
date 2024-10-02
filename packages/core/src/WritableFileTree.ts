@@ -698,7 +698,7 @@ export class WritableFileTree extends FileTree {
           const node = nodes.get(id)!;
           let dataProps: { data?: unknown } | undefined;
           // BUG: Cached file data is not getting patched since !hasFileData.
-          // TODO: Fix by always loading cache OR cache status OR by promise...
+          // TODO: Fix by firing a promise here to patch the cache data....
           if (patch && id === targetId && hasFileData(node)) {
             // We are patching this node's cached data if it's in sync.
             if (patch.ctime !== node.entry.ctime) {
