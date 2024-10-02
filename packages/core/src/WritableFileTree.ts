@@ -249,8 +249,10 @@ export class WritableFileTree extends FileTree {
      */
     if (dataChanging && cache) {
       if (typeof data !== "undefined") {
+        console.log("[FT] Caching", node.entry.id, (node as FileNode).data);
         cache.set(node.entry, (node as FileNode).data);
       } else {
+        console.log("[FT] Uncaching", node.entry.id);
         cache.delete(node.entry);
       }
     }
