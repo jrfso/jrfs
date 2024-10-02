@@ -7,6 +7,8 @@ export async function openRepo() {
 
   const cache = await createFileCache();
   const repo = new ProjectRepo({ cache });
+  // Let the developer play.
+  (window as any).repo = repo;
 
   await repo.open();
 
