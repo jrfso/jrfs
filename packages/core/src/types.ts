@@ -24,6 +24,8 @@ export interface FileTreeChange {
   };
 }
 
+export type FileDataChangeHandler = (change: FileDataChange) => void;
+
 export type FileTreeChangeHandler = (change: FileTreeChange) => void;
 
 export function logFileTreeChange({
@@ -203,6 +205,11 @@ export interface FileTypeInfo<M = unknown> {
   schema?: any;
 }
 // #endregion
+
+export interface FileDataChange {
+  entry: Entry;
+  data: unknown;
+}
 
 export interface MutativePatch {
   op: "add" | "remove" | "replace";

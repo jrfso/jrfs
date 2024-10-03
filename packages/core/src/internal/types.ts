@@ -2,6 +2,7 @@
 import {
   type Entry,
   type EntryOrId,
+  type FileDataChange,
   type FileTreeChange,
   type NodeInfo,
   isDirectoryId,
@@ -43,6 +44,7 @@ export interface FileTreeInternal {
   readonly nodes: FileTreeNodes;
   root: Readonly<FileTreeRoot>;
   tx: number;
+  onDataChange(change: FileDataChange): void;
   onChange(change: FileTreeChange): void;
 }
 

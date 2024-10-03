@@ -1,22 +1,32 @@
-import { openDB } from "idb";
-import { type Entry, idOrEntryId } from "@jrfs/core";
+import { IDBPDatabase, deleteDB, openDB } from "idb";
 import {
-  type FileCacheItem,
-  type FileCacheProvider,
-} from "./FileCacheProvider";
+  type Entry,
+  type EntryOrId,
+  type FileDataChange,
+  type FileTree,
+  type FileTreeChange,
+  idOrEntryId,
+  isFileId,
+  logFileTreeChange,
+} from "@jrfs/core";
+import type { FileCacheProvider } from "@jrfs/core/cache";
 
 export interface IdbFileCacheOptions {
   db?: string;
   store?: string;
 }
 
-export async function createFileCache(options: IdbFileCacheOptions = {}) {
+interface FileCacheItem<T = Readonly<unknown>> {
+  ctime: number;
+  data: T;
+}
+
+export function createFileCache(options: IdbFileCacheOptions = {}) {
   const { db: dbName = "fcache", store = "fdata" } = options;
-  const db = await openDB(dbName, 1, {
-    upgrade(db, oldVersion, newVersion, tx, event) {
-      db.createObjectStore(store);
-    },
-  });
+  let db = null! as IDBPDatabase<unknown>;
+  let tree = null! as FileTree;
+  let unsubFromDataChanges: () => void | undefined;
+  let unsubFromTreeChanges: () => void | undefined;
   const writing = new Map<string, Promise<void>>();
 
   function doneWriting(id: string, next: () => void, ctime = -1) {
@@ -50,67 +60,118 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
     await writer;
   }
 
+  async function getItem(entryOrId: EntryOrId) {
+    const id = idOrEntryId(entryOrId);
+    await waitIfWriting(id);
+    return db.get(store, id);
+  }
+
+  async function deleteItem(entryOrId: EntryOrId) {
+    const id = idOrEntryId(entryOrId);
+    console.log("[IDB] FileCache.delete", id);
+    await waitIfWriting(id);
+    const [resolve, reject] = startWriting(id);
+    try {
+      await db.delete(store, id);
+    } catch (ex) {
+      doneWriting(id, () => reject(ex));
+      throw ex;
+    }
+    doneWriting(id, resolve);
+  }
+
+  async function setItem<T = Readonly<unknown>>(entry: Entry, data: T) {
+    const { id, ctime } = entry;
+    console.log("[IDB] FileCache.set", id, ctime, data);
+    await waitIfWriting(id);
+    const [resolve, reject] = startWriting(id, ctime);
+    const item: FileCacheItem<T> = {
+      ctime,
+      data,
+    };
+    try {
+      await db.put(store, item, id);
+    } catch (ex) {
+      doneWriting(id, () => reject(ex), ctime);
+      throw ex;
+    }
+    doneWriting(id, resolve, ctime);
+    return item;
+  }
+
+  // async function clearItems() {
+  //   console.log("[IDB] FileCache.clear");
+  //   return db.clear(store);
+  // }
+
+  function onDataChange(change: FileDataChange) {
+    const { entry, data } = change;
+    const hasValue = typeof data !== "undefined";
+    console.log(`[IDB] onDataChange`, entry.id, hasValue ? "(SET)" : "(DEL)");
+    if (hasValue) {
+      setItem(entry, data);
+    } else {
+      deleteItem(entry);
+    }
+  }
+
+  function onTreeChange(changes: FileTreeChange) {
+    const { /*id,tx,op,added,changed,*/ removed /*,patch*/ } = changes;
+    // console.log(`[IDB] onTreeChange`, logFileTreeChange(changes));
+    // if (added || changed) {
+    //   const data = tree.data(id);
+    //   if (typeof data !== "undefined") {
+    //     const entry = tree.getEntry(id);
+    //     if (entry) {
+    //       setItem(entry, data);
+    //     }
+    //   }
+    // }
+    if (removed) {
+      console.log(`[IDB] onTreeChange (removed)`, logFileTreeChange(changes));
+      for (const id of removed) {
+        if (isFileId(id)) deleteItem(id);
+      }
+    }
+  }
+
   const fileCache: FileCacheProvider = {
-    async get(entryOrId) {
-      const id = idOrEntryId(entryOrId);
-      await waitIfWriting(id);
-      return db.get(store, id);
+    async open(fileTree) {
+      tree = fileTree;
+      db = await openDB(dbName, 1, {
+        upgrade(db, oldVersion, newVersion, tx, event) {
+          db.createObjectStore(store);
+        },
+      });
+      unsubFromDataChanges = tree.onDataChange(onDataChange);
+      unsubFromTreeChanges = tree.onChange(onTreeChange);
+    },
+    async close() {
+      if (unsubFromDataChanges) unsubFromDataChanges();
+      if (unsubFromTreeChanges) unsubFromTreeChanges();
+      if (db) db.close();
     },
     async getData<T = unknown>(entry: Entry) {
-      const { id, ctime } = entry;
-      await waitIfWriting(id);
       // Cached item?
-      const item = (await db.get(store, id)) as FileCacheItem;
+      const item = await getItem(entry);
       if (!item) return undefined;
       // Matches current timestamp?
+      const { id, ctime } = entry;
       if (item.ctime !== ctime) {
         // Prune expired item immediately.
         console.warn(
           `[IDB] FileCache item was out of sync "${id}@${item.ctime}"`,
         );
-        await fileCache.delete(id);
+        await deleteItem(id);
         return undefined;
       }
       // Return cached data.
       return item.data as T;
     },
-    async set<T = Readonly<unknown>>(entry: Entry, data: T) {
-      const { id, ctime } = entry;
-      console.log("[IDB] FileCache.set", id, ctime, data);
-      await waitIfWriting(id);
-      const [resolve, reject] = startWriting(id, ctime);
-      const item: FileCacheItem<T> = {
-        ctime,
-        data,
-      };
-      try {
-        await db.put(store, item, id);
-      } catch (ex) {
-        doneWriting(id, () => reject(ex), ctime);
-        throw ex;
-      }
-      doneWriting(id, resolve, ctime);
-      return item;
-    },
-    async delete(entryOrId) {
-      const id = idOrEntryId(entryOrId);
-      console.log("[IDB] FileCache.delete", id);
-      await waitIfWriting(id);
-      const [resolve, reject] = startWriting(id);
-      try {
-        await db.delete(store, id);
-      } catch (ex) {
-        doneWriting(id, () => reject(ex));
-        throw ex;
-      }
-      doneWriting(id, resolve);
-    },
-    clear() {
-      console.log("[IDB] FileCache.clear");
-      return db.clear(store);
-    },
-    keys() {
-      return db.getAllKeys(store) as Promise<string[]>;
+    async remove() {
+      // TODO: Handle blocked callback of deleteDB().
+      await deleteDB(dbName);
+      // CONSIDER: We can offer an option to clear items instead of whole db.
     },
   };
   return fileCache;

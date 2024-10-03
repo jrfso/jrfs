@@ -250,6 +250,9 @@ export class WritableFileTree extends FileTree {
         this.#sortSiblings(node);
       }
     }
+    if (dataChanging) {
+      this.#base.onDataChange({ entry: node.entry, data });
+    }
     return node;
   }
   /** Sort node parent children. */

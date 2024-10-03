@@ -8,6 +8,7 @@ import {
   registerDriver,
   TransactionOutParams,
 } from "@jrfs/core";
+import { FileCacheProvider } from "@jrfs/core/cache";
 // Local
 import type { WebClient } from "./WebClient";
 
@@ -25,12 +26,14 @@ declare module "@jrfs/core" {
 export class WebDriver<FT extends FileTypes<FT>> extends Driver<FT> {
   /** The repo configuration. */
   #client: WebClient;
+  #cache: FileCacheProvider | undefined;
 
   constructor(props: DriverProps<FT>, config: WebDriverConfig) {
     super(props);
     // Set object name for the default `toString` implementation.
     (this as any)[Symbol.toStringTag] = `WebDriver`;
     this.#client = config.client;
+    this.#cache = config.fileCache;
   }
 
   // #region -- Lifecycle
@@ -40,6 +43,10 @@ export class WebDriver<FT extends FileTypes<FT>> extends Driver<FT> {
     console.log("WebDriver onClose");
     const client = this.#client;
     await client.close();
+    const cache = this.#cache;
+    if (cache) {
+      await cache.close();
+    }
   }
   /**
    * Loads all directories and files within the root path using cached ids
@@ -50,16 +57,11 @@ export class WebDriver<FT extends FileTypes<FT>> extends Driver<FT> {
     // Get project file listing from server...
     const client = this.#client;
     await client.open(this.fileTree);
-    // const { id, nodes, total } = await client.connect();
-    // while (total > nodes.length) {
-    //   const load = await client.load(id);
-    //   nodes.push(...load.nodes);
-    // }
-    // // Fill our nodes...
-    // for (const { id, name, pId, ctime } of nodes) {
-    //   const stats = { ctime };
-    //   files.add(name, { id, pId, stats });
-    // }
+    // Cache file data?
+    const cache = this.#cache;
+    if (cache) {
+      await cache.open(this.fileTree);
+    }
   }
   // #endregion
   // #region -- Diagnostics
@@ -83,14 +85,23 @@ export class WebDriver<FT extends FileTypes<FT>> extends Driver<FT> {
     data: unknown;
   }> {
     const { fileTree } = this;
+    // Cached?
+    const cache = this.#cache;
+    if (cache) {
+      const entry = params.fromEntry;
+      const data = await cache.getData(entry);
+      if (typeof data !== "undefined") {
+        return { entry, data };
+      }
+    }
+    // Get from server.
     const result = await this.#client.get(params);
     const entry = fileTree.getEntry(result.id);
     if (!entry) {
       throw new Error(`Entry not found "${result.id}".`);
     }
-    // Update our data cache.
+    // Update our in-memory data.
     fileTree.setData(entry, result.data);
-    // CONSIDER: Update our data cache in the WebClient instead?
     return {
       entry,
       data: result.data,
@@ -138,6 +149,7 @@ export class WebDriver<FT extends FileTypes<FT>> extends Driver<FT> {
 /** Configuration data for WebDriver. */
 export interface WebDriverConfig {
   client: WebClient;
+  fileCache?: FileCacheProvider;
 }
 
 // Set object name for the default `toString` implementation.
