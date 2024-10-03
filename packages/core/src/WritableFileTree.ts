@@ -19,7 +19,9 @@ import {
 import {
   Entry,
   EntryOrId,
+  FileDataChangeHandler,
   FileTreeChange,
+  FileTreeChangeHandler,
   MutativePatches,
   NodeBuilder,
   NodeEntry,
@@ -79,6 +81,14 @@ export class WritableFileTree extends FileTree {
   /** Gets the target {@link FileTree} that is being written to. */
   get target() {
     return this.#target;
+  }
+
+  override onChange(handler: FileTreeChangeHandler) {
+    return this.#target.onChange(handler);
+  }
+
+  override onDataChange(handler: FileDataChangeHandler) {
+    return this.#target.onDataChange(handler);
   }
 
   // #region -- Internal
