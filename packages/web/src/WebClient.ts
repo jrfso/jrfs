@@ -100,6 +100,7 @@ export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
     // Notice (event)
     if (msg.to === "change") {
       const { id, op, tx, a: added, c: changed, r: removed, p: patch } = msg.of;
+      console.log("[WS] onChange", id);
       tree.sync({
         id,
         op,

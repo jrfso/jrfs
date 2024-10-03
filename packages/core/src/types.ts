@@ -24,6 +24,8 @@ export interface FileTreeChange {
   };
 }
 
+export type FileDataChangeHandler = (change: FileDataChange) => void;
+
 export type FileTreeChangeHandler = (change: FileTreeChange) => void;
 
 export function logFileTreeChange({
@@ -72,7 +74,12 @@ export type Entry = Readonly<NodeEntry>;
 export type EntryOfId = Pick<Entry, "id">;
 
 export type EntryOrPath = EntryOfId | string;
-
+/**
+ * Parameter of an `Entry{id}` or just an `string` id.
+ *
+ * NOTE: Uses `EntryOfId` instead of `Entry`, to enforce non-usage of fields
+ * other than `id` when an `Entry` is given as a parameter to a public method.
+ */
 export type EntryOrId = EntryOfId | string;
 
 /** Extended file-system node details. */
@@ -129,6 +136,10 @@ export type NodeVisitResult = boolean | undefined | void;
 export function getCtimeOption(stats: NodeOptions["stats"]) {
   const ctime = stats.ctime;
   return typeof ctime === "number" ? ctime : ctime.getTime();
+}
+
+export function idOrEntryId(value: EntryOrId) {
+  return typeof value === "string" ? value : value.id;
 }
 
 export function isDirectoryId(id: string): boolean {
@@ -194,6 +205,11 @@ export interface FileTypeInfo<M = unknown> {
   schema?: any;
 }
 // #endregion
+
+export interface FileDataChange {
+  entry: Entry;
+  data: unknown;
+}
 
 export interface MutativePatch {
   op: "add" | "remove" | "replace";

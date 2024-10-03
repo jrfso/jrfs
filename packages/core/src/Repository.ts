@@ -169,15 +169,19 @@ export class Repository<
     );
   }
 
-  async get(entry: EntryOrPath) {
-    const { path: from, node: fromNode } = this.fileEntry(entry);
+  async get(target: EntryOrPath) {
+    const { path: from, node: fromNode } = this.fileEntry(target);
+    const { entry } = fromNode;
+    // In memory?
     if (typeof fromNode.data !== "undefined") {
       return {
-        entry: fromNode.entry,
+        entry,
         data: fromNode.data,
       };
     }
-    return this.driver.get({ from, fromEntry: fromNode.entry });
+    // Get from driver.
+    const result = await this.driver.get({ from, fromEntry: entry });
+    return result;
   }
 
   async move(

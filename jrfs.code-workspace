@@ -12,6 +12,10 @@
       "path": "packages/core"
     },
     {
+      "name": "idb",
+      "path": "packages/idb"
+    },
+    {
       "name": "node",
       "path": "packages/node"
     },

@@ -1,10 +1,11 @@
 {
-  "name": "@jrfs/web",
+  "name": "@jrfs/idb",
   "version": "0.0.2",
-  "description": "JRFS browser drivers.",
+  "description": "JRFS idb file cache.",
   "repository": "github:jrfso/jrfs",
-  "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/web",
+  "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/idb",
   "keywords": [
+    "idb",
     "jrfs",
     "json",
     "fs",
@@ -35,6 +36,7 @@
     "watch-build": "node --watch-path=./src --watch-path=../../node_modules/@jrfs/core/lib ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
   "dependencies": {
-    "@jrfs/core": "^0.0.2"
+    "@jrfs/core": "^0.0.2",
+    "idb": "^8.0.0"
   }
 }

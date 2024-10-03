@@ -3,6 +3,8 @@ import {
   type Entry,
   type EntryOrId,
   type EntryOrPath,
+  type FileDataChange,
+  type FileDataChangeHandler,
   type FileTreeChange,
   type FileTreeChangeHandler,
   type NodeInfo,
@@ -29,6 +31,8 @@ import {
   isDirectoryNode,
   isFileNode,
 } from "@/internal/types";
+
+// TODO: Add onDataChange event.
 
 export class FileTree {
   #nodes: FileTreeNodes;
@@ -67,9 +71,12 @@ export class FileTree {
     },
     onChange: {
       value: (change: FileTreeChange) => {
-        // const { tx } = change;
-        // if (tx) this.#tx = tx;
         this.#onChange(change);
+      },
+    },
+    onDataChange: {
+      value: (change: FileDataChange) => {
+        this.#onDataChange(change);
       },
     },
   });
@@ -84,22 +91,45 @@ export class FileTree {
   readonly #onChangeHandlers = new Set<FileTreeChangeHandler>();
 
   #onChange(change: FileTreeChange) {
-    const onChangeHandlers = this.#onChangeHandlers;
+    const handlers = this.#onChangeHandlers;
     console.log(
       "[FT] ON CHANGE",
       logFileTreeChange(change),
-      "listeners:" + onChangeHandlers.size,
+      "listeners:" + handlers.size,
       "tx:" + this.#tx,
     );
-    callEventHandlers(change, onChangeHandlers);
+    callEventHandlers(change, handlers);
+  }
+
+  readonly #onDataChangeHandlers = new Set<FileDataChangeHandler>();
+
+  #onDataChange(change: FileDataChange) {
+    const handlers = this.#onDataChangeHandlers;
+    console.log(
+      "[FT] ON DATA CHANGE",
+      change.entry.id,
+      "listeners:" + handlers.size,
+      "tx:" + this.#tx,
+    );
+    callEventHandlers(change, handlers);
   }
 
   onChange(handler: FileTreeChangeHandler) {
-    const onChangeHandlers = this.#onChangeHandlers;
-    onChangeHandlers.add(handler);
+    const handlers = this.#onChangeHandlers;
+    handlers.add(handler);
     /** Function to unsubscribe from {@link onChange} events. */
     function unsubscribe() {
-      onChangeHandlers.delete(handler);
+      handlers.delete(handler);
+    }
+    return unsubscribe;
+  }
+
+  onDataChange(handler: FileDataChangeHandler) {
+    const handlers = this.#onDataChangeHandlers;
+    handlers.add(handler);
+    /** Function to unsubscribe from {@link onDataChange} events. */
+    function unsubscribe() {
+      handlers.delete(handler);
     }
     return unsubscribe;
   }

@@ -41,6 +41,15 @@ export const projectService = {
     registerSockets(repo);
 
     // setTimeout(async () => {
+    //   console.log("TESTING WRITE FILE");
+    //   await repo!.write<"db">("backend/db/main/_.db.json", (data) => {
+    //     data.db.name = "main";
+    //     data.db.dialect = "mysql";
+    //     delete (data.db as any).preferredDialect;
+    //   });
+    // }, 24000);
+
+    // setTimeout(async () => {
     //   await repo!.rename("backend/db/main/_.db.json", "my.db.json");
     // }, 12000);
 

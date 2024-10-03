@@ -5,6 +5,8 @@ export async function openRepo() {
   console.log("openRepo");
 
   const repo = new ProjectRepo();
+  // Let the developer play.
+  (window as any).repo = repo;
 
   await repo.open();
 

@@ -19,7 +19,9 @@ import {
 import {
   Entry,
   EntryOrId,
+  FileDataChangeHandler,
   FileTreeChange,
+  FileTreeChangeHandler,
   MutativePatches,
   NodeBuilder,
   NodeEntry,
@@ -79,6 +81,14 @@ export class WritableFileTree extends FileTree {
   /** Gets the target {@link FileTree} that is being written to. */
   get target() {
     return this.#target;
+  }
+
+  override onChange(handler: FileTreeChangeHandler) {
+    return this.#target.onChange(handler);
+  }
+
+  override onDataChange(handler: FileDataChangeHandler) {
+    return this.#target.onDataChange(handler);
   }
 
   // #region -- Internal
@@ -214,6 +224,7 @@ export class WritableFileTree extends FileTree {
     const { nodes } = this;
     const { entry, children, data } = props;
     const id = orig.entry.id;
+    const dataChanging = "data" in props;
     const node: Node = Object.freeze(
       Object.assign(
         {
@@ -230,7 +241,7 @@ export class WritableFileTree extends FileTree {
                 : orig.children,
             }
           : isFileNode(orig)
-            ? { data: "data" in props ? deepFreeze(data) : orig.data }
+            ? { data: dataChanging ? deepFreeze(data) : orig.data }
             : undefined,
       ),
     );
@@ -248,6 +259,9 @@ export class WritableFileTree extends FileTree {
         // Sort parent's children.
         this.#sortSiblings(node);
       }
+    }
+    if (dataChanging) {
+      this.#base.onDataChange({ entry: node.entry, data });
     }
     return node;
   }
@@ -279,7 +293,7 @@ export class WritableFileTree extends FileTree {
     }
     return { parentNode, siblings };
   }
-  /** Sets the cached data for a given node. */
+  /** Sets the in-memory data for a given node. */
   setData(entry: EntryOrId, data?: unknown) {
     const node = this.getNode(entry)!;
     return this.#set(node, { data }).entry;
@@ -656,11 +670,13 @@ export class WritableFileTree extends FileTree {
         for (const { id, ctime, name, pId } of changed) {
           const node = nodes.get(id)!;
           let dataProps: { data?: unknown } | undefined;
-          if (patch && id === targetId && hasFileData(node)) {
-            // We are patching this node's cached data if it's in sync.
+          const isPatchTarget = patch && id === targetId;
+          if (isPatchTarget && hasFileData(node)) {
+            // Patch this node's in-memory data if it's in sync.
             if (patch.ctime !== node.entry.ctime) {
-              // REMOVE out of sync data!
-              console.error(`Removing out of sync data on "${name}"!`);
+              console.error(
+                `Removing out of sync data on "${id}@${ctime}:${name}"!`,
+              );
               dataProps = { data: undefined };
             } else {
               // Patch away since the original patch ctime matches our ctime.
@@ -670,16 +686,15 @@ export class WritableFileTree extends FileTree {
             }
           }
           // Update the node's entry
-          changes.push(
-            this.#set(node, {
-              entry: {
-                ctime: ctime,
-                name: name,
-                pId: pId,
-              },
-              ...dataProps,
-            }).entry,
-          );
+          const newEntry = this.#set(node, {
+            entry: {
+              ctime: ctime,
+              name: name,
+              pId: pId,
+            },
+            ...dataProps,
+          }).entry;
+          changes.push(newEntry);
         }
       }
       this.#base.onChange({
@@ -698,7 +713,7 @@ export class WritableFileTree extends FileTree {
     params: FileTreeWriteParams,
     out?: TransactionOutParams,
   ): Entry {
-    const { data, stats } = params;
+    const { data, patch, stats } = params;
     let node = this.#getNode(entry);
     if (!node) {
       // TODO: Use a node getter that just does this automatically...
@@ -708,12 +723,11 @@ export class WritableFileTree extends FileTree {
       data,
       entry: { ctime: getCtimeOption(stats) },
     });
-    // CONSIDER: Send patches with this file change?
     const change: FileTreeChange = {
       op: "write",
       id: node.entry.id,
       changed: [node.entry],
-      patch: params.patch,
+      patch,
       tx: this.#nextTx(),
     };
     if (out) {
@@ -726,7 +740,7 @@ export class WritableFileTree extends FileTree {
   // #region -- Tree Actions
   /** Builds the tree from source. */
   async build<T>(cb: (builder: FileTreeBuilder) => Promise<T>): Promise<T> {
-    const nodes = this.nodes;
+    const { nodes } = this;
     if (nodes.size > 0) {
       throw new Error(`The FileTree is not empty!`);
     }
@@ -765,7 +779,7 @@ export class WritableFileTree extends FileTree {
     return cbResult;
   }
 
-  // CONSIDER: Merge build and open methods, they do the same thing...
+  // CONSIDER: Merge build and open methods, they do the same thing.
 
   open(params: { entries: Entry[]; tx: number }) {
     const { entries, tx } = params;
