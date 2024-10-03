@@ -20,13 +20,13 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
   });
   const writing = new Map<string, Promise<void>>();
 
-  function doneWriting(id: string, next: () => void) {
+  function doneWriting(id: string, next: () => void, ctime = -1) {
     writing.delete(id);
-    console.log("[IDB] Writing", id);
+    console.log("[IDB] Wrote", id, ctime);
     next();
   }
 
-  function startWriting(id: string) {
+  function startWriting(id: string, ctime = -1) {
     let callbacks!: PromiseCallbacks;
     writing.set(
       id,
@@ -34,7 +34,7 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
         callbacks = [resolve, reject];
       }),
     );
-    console.log("[IDB] Wrote", id);
+    console.log("[IDB] Writing", id, ctime);
     return callbacks;
   }
   /**
@@ -66,7 +66,9 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
       // Matches current timestamp?
       if (item.ctime !== ctime) {
         // Prune expired item immediately.
-        console.warn(`[IDB] FileCache item was out of sync "${id}".`);
+        console.warn(
+          `[IDB] FileCache item was out of sync "${id}@${item.ctime}"`,
+        );
         await fileCache.delete(id);
         return undefined;
       }
@@ -75,9 +77,9 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
     },
     async set<T = Readonly<unknown>>(entry: Entry, data: T) {
       const { id, ctime } = entry;
-      console.log("[IDB] FileCache.set", id, data);
+      console.log("[IDB] FileCache.set", id, ctime, data);
       await waitIfWriting(id);
-      const [resolve, reject] = startWriting(id);
+      const [resolve, reject] = startWriting(id, ctime);
       const item: FileCacheItem<T> = {
         ctime,
         data,
@@ -85,10 +87,10 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
       try {
         await db.put(store, item, id);
       } catch (ex) {
-        doneWriting(id, () => reject(ex));
+        doneWriting(id, () => reject(ex), ctime);
         throw ex;
       }
-      doneWriting(id, resolve);
+      doneWriting(id, resolve, ctime);
       return item;
     },
     async delete(entryOrId) {

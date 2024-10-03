@@ -119,6 +119,7 @@ export class WritableFileTree extends FileTree {
     nodes.set(id, Object.freeze(node));
     // Cache data
     if (!isDir && cache && typeof data !== "undefined") {
+      console.log("[FT] #addEntry->Cache.set");
       cache.set(node.entry, (node as FileNode).data);
     }
     // Add to parent
@@ -254,8 +255,10 @@ export class WritableFileTree extends FileTree {
      */
     if (dataChanging && cache) {
       if (typeof data !== "undefined") {
+        console.log("[FT] #set->Cache.set");
         cache.set(node.entry, (node as FileNode).data);
       } else {
+        console.log("[FT] #set->Cache.delete");
         cache.delete(node.entry);
       }
     }
@@ -719,17 +722,26 @@ export class WritableFileTree extends FileTree {
             ...dataProps,
           }).entry;
           changes.push(newEntry);
-          // Update cache
-          if (isPatchTarget && cache) {
+          // Update cache if no dataProps were set (since #set updates cache).
+          if (isPatchTarget && cache && !dataProps) {
+            // console.log("Checking cache for", targetId, patch.ctime, ctime);
             cache.get(targetId).then((cached) => {
-              if (cached) {
+              if (cached && cached.ctime !== newEntry.ctime) {
                 if (patch.ctime !== cached.ctime) {
+                  console.log("[FT] sync->Cache.delete", {
+                    patchCtime: patch.ctime,
+                    cacheCtime: cached.ctime,
+                    newCtime: newEntry.ctime,
+                  });
                   // REMOVE out of sync data!
                   cache.delete(targetId);
                 } else {
+                  console.log("[FT] sync->Cache.set");
                   const data = apply(cached.data, patch.patches);
                   cache.set(newEntry, data);
                 }
+              } else {
+                console.log("Cache already updated", targetId, newEntry.ctime);
               }
             });
           }
