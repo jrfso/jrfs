@@ -16,7 +16,6 @@ import type {
   DriverTypes,
   TransactionOutParams,
 } from "@/Driver";
-import type { FileCacheProvider } from "@/FileCacheProvider";
 import { FileTree } from "@/FileTree";
 import { FileTypeProvider } from "@/FileTypeProvider";
 import { type CreateShortIdFunction, createShortId } from "@/helpers";
@@ -53,7 +52,7 @@ export class Repository<
   constructor(
     options: RepositoryOptions<FT, DK> & Partial<Pick<DriverTypeOptions, DK>>,
   ) {
-    super({ cache: options.fileCache });
+    super();
     this.#fileTypes = options.fileTypes;
     const driverType = options.driver;
     const driverFactory = driverFactories[driverType];
@@ -173,21 +172,11 @@ export class Repository<
   async get(target: EntryOrPath) {
     const { path: from, node: fromNode } = this.fileEntry(target);
     const { entry } = fromNode;
-    // Cached with node? (On server / Already retrieved registered JSON type.)
+    // In memory?
     if (typeof fromNode.data !== "undefined") {
       return {
         entry,
         data: fromNode.data,
-      };
-    }
-    // In cache?
-    const cache = this.cache;
-    const caching = !!cache;
-    const cached = caching ? await cache.getData(entry) : undefined;
-    if (cached) {
-      return {
-        entry,
-        data: cached,
       };
     }
     // Get from driver.
@@ -414,7 +403,6 @@ export interface RepositoryOptions<
 > {
   /** Name of the driver type to use. */
   driver: DK;
-  fileCache?: FileCacheProvider;
   fileTypes: FileTypeProvider<FT>;
   /** Provide a unique short id generator to create node ids. */
   createShortId?: CreateShortIdFunction;

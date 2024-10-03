@@ -1,4 +1,4 @@
-import type { Entry, EntryOrId } from "@/types";
+import type { Entry, EntryOrId } from "@jrfs/core";
 
 export interface FileCacheItem<T = Readonly<unknown>> {
   ctime: number;

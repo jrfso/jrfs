@@ -11,7 +11,6 @@ import {
   NoChildren,
   DirectoryNode,
   NodeNotFoundError,
-  FileNode,
   FileTreeRoot,
   FileTreeInternal,
   FileTreeNodes,
@@ -27,7 +26,6 @@ import {
   NodeOptions,
   getCtimeOption,
   isDirectoryId,
-  isFileId,
 } from "@/types";
 import type { TransactionOutParams } from "./Driver";
 import { FileTree } from "./FileTree";
@@ -72,7 +70,6 @@ export class WritableFileTree extends FileTree {
     super(baseTree);
     // We MUST forward state changes to #base. See setRootNode, setTx, etc.
     this.#base = baseTree[INTERNAL];
-    console.assert(this.cache === baseTree.cache, "Cache should match.");
     console.assert(this.nodes === this.#base.nodes, "Nodes should match.");
     console.assert(this.root === this.#base.root, "Root should match.");
     this.#createShortId = createShortId;
@@ -104,7 +101,7 @@ export class WritableFileTree extends FileTree {
     parentNode?: DirectoryNode,
     data?: unknown,
   ): Node {
-    const { cache, nodes } = this;
+    const { nodes } = this;
     const { id } = entry;
     // Create
     const node: Node = isDir
@@ -117,11 +114,6 @@ export class WritableFileTree extends FileTree {
           data: deepFreeze(data),
         };
     nodes.set(id, Object.freeze(node));
-    // Cache data
-    if (!isDir && cache && typeof data !== "undefined") {
-      console.log("[FT] #addEntry->Cache.set");
-      cache.set(node.entry, (node as FileNode).data);
-    }
     // Add to parent
     this.#addToParent(entry, parentNode);
     return node;
@@ -219,7 +211,7 @@ export class WritableFileTree extends FileTree {
       data?: unknown;
     },
   ): Node {
-    const { cache, nodes } = this;
+    const { nodes } = this;
     const { entry, children, data } = props;
     const id = orig.entry.id;
     const dataChanging = "data" in props;
@@ -244,24 +236,7 @@ export class WritableFileTree extends FileTree {
       ),
     );
     nodes.set(id, node);
-    /**
-     * Manage effects
-     *
-     * We're NOT WAITING for any FileCacheProvider promises here since we don't
-     * want to make this an async function.
-     *
-     * Therefore, all FileCacheProvider implementations MUST block readers
-     * while writing.
-     */
-    if (dataChanging && cache) {
-      if (typeof data !== "undefined") {
-        console.log("[FT] #set->Cache.set");
-        cache.set(node.entry, (node as FileNode).data);
-      } else {
-        console.log("[FT] #set->Cache.delete");
-        cache.delete(node.entry);
-      }
-    }
+    // Manage effects
     if (entry) {
       const entry = node.entry;
       if (orig.entry.pId !== entry.pId) {
@@ -305,7 +280,7 @@ export class WritableFileTree extends FileTree {
     }
     return { parentNode, siblings };
   }
-  /** Sets the cached data for a given node. */
+  /** Sets the in-memory data for a given node. */
   setData(entry: EntryOrId, data?: unknown) {
     const node = this.getNode(entry)!;
     return this.#set(node, { data }).entry;
@@ -604,22 +579,11 @@ export class WritableFileTree extends FileTree {
     }
     const id = node.entry.id;
     // Delete node children.
-    const { cache, nodes } = this;
+    const { nodes } = this;
     /** Removal entries in order from children to parents. */
     const removals: Entry[] = isDirectoryNode(node)
       ? this.descendants(node.entry).reverse()
       : [];
-    let cacheTask: Promise<any> | undefined;
-    // Uncache removed files
-    if (cache) {
-      for (const child of removals) {
-        if (isFileId(child.id)) {
-          cacheTask = cacheTask
-            ? cacheTask.then(() => cache.delete(child.id))
-            : cache.delete(child.id);
-        }
-      }
-    }
     for (const child of removals) {
       // console.log("DELETING", childId, child.name);
       nodes.delete(child.id);
@@ -629,11 +593,6 @@ export class WritableFileTree extends FileTree {
     this.#disconnect(node);
     nodes.delete(id);
     removals.push(node.entry);
-    if (cache) {
-      cacheTask = cacheTask
-        ? cacheTask.then(() => cache.delete(id))
-        : cache.delete(id);
-    }
     const change: FileTreeChange = {
       op: "remove",
       id,
@@ -694,16 +653,17 @@ export class WritableFileTree extends FileTree {
       let changes: Entry[] | undefined;
       if (changed) {
         changes = [];
-        const { cache, nodes } = this;
+        const { nodes } = this;
         for (const { id, ctime, name, pId } of changed) {
           const node = nodes.get(id)!;
           let dataProps: { data?: unknown } | undefined;
           const isPatchTarget = patch && id === targetId;
           if (isPatchTarget && hasFileData(node)) {
-            // We are patching this node's cached data if it's in sync.
+            // Patch this node's in-memory data if it's in sync.
             if (patch.ctime !== node.entry.ctime) {
-              // REMOVE out of sync data!
-              console.error(`Removing out of sync data on "${name}"!`);
+              console.error(
+                `Removing out of sync data on "${id}@${ctime}:${name}"!`,
+              );
               dataProps = { data: undefined };
             } else {
               // Patch away since the original patch ctime matches our ctime.
@@ -722,29 +682,6 @@ export class WritableFileTree extends FileTree {
             ...dataProps,
           }).entry;
           changes.push(newEntry);
-          // Update cache if no dataProps were set (since #set updates cache).
-          if (isPatchTarget && cache && !dataProps) {
-            // console.log("Checking cache for", targetId, patch.ctime, ctime);
-            cache.get(targetId).then((cached) => {
-              if (cached && cached.ctime !== newEntry.ctime) {
-                if (patch.ctime !== cached.ctime) {
-                  console.log("[FT] sync->Cache.delete", {
-                    patchCtime: patch.ctime,
-                    cacheCtime: cached.ctime,
-                    newCtime: newEntry.ctime,
-                  });
-                  // REMOVE out of sync data!
-                  cache.delete(targetId);
-                } else {
-                  console.log("[FT] sync->Cache.set");
-                  const data = apply(cached.data, patch.patches);
-                  cache.set(newEntry, data);
-                }
-              } else {
-                console.log("Cache already updated", targetId, newEntry.ctime);
-              }
-            });
-          }
         }
       }
       this.#base.onChange({
@@ -822,22 +759,6 @@ export class WritableFileTree extends FileTree {
       );
       // Add
       nodes.set(id, node);
-      // Cache data (no need atm, see below)
-      //if (this.cache && typeof node.data !== "undefined") {
-      //
-      //// NOTE: This is never called in our current setup! (No cache on server,
-      //// FsDriver uses build method, WebClient uses open method, not build.
-      ////
-      //// NOTE: For merging with open...
-      ////
-      //// The call to #addEntry does this for us in our open method.
-      //// However that method is not async! So we should be careful how many
-      //// cache writes we send at once.
-      //// CONSIDER: One idea is to chain the promises so they run sequentially,
-      //// e.g. task = task.then(() => cache.set(node.entry, node.data));
-      //// like we do in #removeEntry...
-      //
-      //await cache.set(node.entry, node.data);}
     }
     const rootChildren = sortChildren(rootItems, items as FileTreeNodes);
     this.setRootNode(createRoot(rootChildren));

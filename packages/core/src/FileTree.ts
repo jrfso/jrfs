@@ -29,22 +29,15 @@ import {
   isDirectoryNode,
   isFileNode,
 } from "@/internal/types";
-import { FileCacheProvider } from "@/FileCacheProvider";
 
 export class FileTree {
-  #cache?: FileCacheProvider;
   #nodes: FileTreeNodes;
   #root: Readonly<FileTreeRoot>;
   #rootPath: string;
   #tx: number;
 
-  constructor(options?: {
-    cache?: FileCacheProvider;
-    rootPath?: string;
-    [INTERNAL]?: FileTreeInternal;
-  }) {
-    const { cache, rootPath, [INTERNAL]: internal } = options ?? {};
-    this.#cache = cache;
+  constructor(options?: { rootPath?: string; [INTERNAL]?: FileTreeInternal }) {
+    const { rootPath, [INTERNAL]: internal } = options ?? {};
     this.#rootPath = rootPath ?? "";
     this.#nodes = internal?.nodes ?? new Map<string, Node>();
     this.#root = internal?.root ?? createRoot();
@@ -112,10 +105,6 @@ export class FileTree {
   }
   // #endregion
   // #region -- Core
-
-  get cache() {
-    return this.#cache;
-  }
 
   protected get nodes() {
     return this.#nodes;

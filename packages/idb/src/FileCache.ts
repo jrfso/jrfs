@@ -1,10 +1,9 @@
 import { openDB } from "idb";
+import { type Entry, idOrEntryId } from "@jrfs/core";
 import {
-  type Entry,
   type FileCacheItem,
   type FileCacheProvider,
-  idOrEntryId,
-} from "@jrfs/core";
+} from "./FileCacheProvider";
 
 export interface IdbFileCacheOptions {
   db?: string;
