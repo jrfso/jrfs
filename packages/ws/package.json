@@ -1,6 +1,6 @@
 {
   "name": "@jrfs/ws",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "JRFS ws integration.",
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/ws",
@@ -36,7 +36,7 @@
     "watch-build": "node --watch-path=./src --watch-path=../../node_modules/@jrfs/core/lib ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
   "dependencies": {
-    "@jrfs/core": "^0.0.2"
+    "@jrfs/core": "^0.0.3"
   },
   "devDependencies": {
     "ws": "^8.18.0"
