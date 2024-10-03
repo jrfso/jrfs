@@ -2,7 +2,7 @@ import type { Entry, EntryOrId } from "@/types";
 
 export interface FileCacheItem {
   ctime: number;
-  data: unknown;
+  data: Readonly<unknown>;
 }
 
 export interface FileCacheProvider {

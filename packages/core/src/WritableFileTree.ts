@@ -693,23 +693,41 @@ export class WritableFileTree extends FileTree {
       let changes: Entry[] | undefined;
       if (changed) {
         changes = [];
-        const { nodes } = this;
+        const { cache, nodes } = this;
         for (const { id, ctime, name, pId } of changed) {
           const node = nodes.get(id)!;
           let dataProps: { data?: unknown } | undefined;
           // BUG: Cached file data is not getting patched since !hasFileData.
           // TODO: Fix by firing a promise here to patch the cache data....
-          if (patch && id === targetId && hasFileData(node)) {
-            // We are patching this node's cached data if it's in sync.
-            if (patch.ctime !== node.entry.ctime) {
-              // REMOVE out of sync data!
-              console.error(`Removing out of sync data on "${name}"!`);
-              dataProps = { data: undefined };
-            } else {
-              // Patch away since the original patch ctime matches our ctime.
-              dataProps = {
-                data: apply(node.data, patch.patches),
-              };
+          if (patch && id === targetId) {
+            if (hasFileData(node)) {
+              console.log("HAS FILE DATA", node.entry.id);
+              // We are patching this node's cached data if it's in sync.
+              if (patch.ctime !== node.entry.ctime) {
+                // REMOVE out of sync data!
+                console.error(`Removing out of sync data on "${name}"!`);
+                dataProps = { data: undefined };
+              } else {
+                // Patch away since the original patch ctime matches our ctime.
+                dataProps = {
+                  data: apply(node.data, patch.patches),
+                };
+              }
+            } else if (cache) {
+              console.log("NO FILE DATA", node.entry.id);
+              cache.get(targetId).then((cached) => {
+                if (cached) {
+                  if (patch.ctime !== cached.ctime) {
+                    // REMOVE out of sync data!
+                    console.error(`Removing out of sync data on "${name}"!`);
+                    cache.delete(targetId);
+                  } else {
+                    console.log(`Caching`, node.entry.id);
+                    const data = apply(cached.data, patch.patches);
+                    cache.set(node.entry, data);
+                  }
+                }
+              });
             }
           }
           // NOTE: Things not getting patched? Uncomment:
