@@ -55,7 +55,7 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
       await waitIfWriting(id);
       return db.get(store, id);
     },
-    async getData<T = unknown>(entry: Entry): Promise<T | undefined> {
+    async getData<T = unknown>(entry: Entry) {
       const { id, ctime } = entry;
       await waitIfWriting(id);
       // Cached item?
@@ -71,11 +71,11 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
       // Return cached data.
       return item.data as T;
     },
-    async set(entry, data) {
+    async set<T = Readonly<unknown>>(entry: Entry, data: T) {
       const { id, ctime } = entry;
       await waitIfWriting(id);
       const [resolve, reject] = startWriting(id);
-      const item: FileCacheItem = {
+      const item: FileCacheItem<T> = {
         ctime,
         data,
       };
