@@ -254,10 +254,8 @@ export class WritableFileTree extends FileTree {
      */
     if (dataChanging && cache) {
       if (typeof data !== "undefined") {
-        console.log("[FT] Caching", node.entry.id, (node as FileNode).data);
         cache.set(node.entry, (node as FileNode).data);
       } else {
-        console.log("[FT] Uncaching", node.entry.id);
         cache.delete(node.entry);
       }
     }
@@ -719,10 +717,8 @@ export class WritableFileTree extends FileTree {
                 if (cached) {
                   if (patch.ctime !== cached.ctime) {
                     // REMOVE out of sync data!
-                    console.error(`Removing out of sync data on "${name}"!`);
                     cache.delete(targetId);
                   } else {
-                    console.log(`Caching`, node.entry.id);
                     const data = apply(cached.data, patch.patches);
                     cache.set(node.entry, data);
                   }
@@ -730,10 +726,6 @@ export class WritableFileTree extends FileTree {
               });
             }
           }
-          // NOTE: Things not getting patched? Uncomment:
-          // else if (patch && id === targetId) {
-          //   console.log("[FT] No file data to patch", id);
-          // }
           // Update the node's entry
           changes.push(
             this.#set(node, {

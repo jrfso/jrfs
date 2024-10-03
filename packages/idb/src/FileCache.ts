@@ -22,6 +22,7 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
 
   function doneWriting(id: string, next: () => void) {
     writing.delete(id);
+    console.log("[IDB] Writing", id);
     next();
   }
 
@@ -33,6 +34,7 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
         callbacks = [resolve, reject];
       }),
     );
+    console.log("[IDB] Wrote", id);
     return callbacks;
   }
   /**
@@ -64,7 +66,7 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
       // Matches current timestamp?
       if (item.ctime !== ctime) {
         // Prune expired item immediately.
-        console.warn(`[JRFS] IDB FileCache item was out of sync "${id}".`);
+        console.warn(`[IDB] FileCache item was out of sync "${id}".`);
         await fileCache.delete(id);
         return undefined;
       }
@@ -73,6 +75,7 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
     },
     async set<T = Readonly<unknown>>(entry: Entry, data: T) {
       const { id, ctime } = entry;
+      console.log("[IDB] FileCache.set", id, data);
       await waitIfWriting(id);
       const [resolve, reject] = startWriting(id);
       const item: FileCacheItem<T> = {
@@ -90,6 +93,7 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
     },
     async delete(entryOrId) {
       const id = idOrEntryId(entryOrId);
+      console.log("[IDB] FileCache.delete", id);
       await waitIfWriting(id);
       const [resolve, reject] = startWriting(id);
       try {
@@ -101,6 +105,7 @@ export async function createFileCache(options: IdbFileCacheOptions = {}) {
       doneWriting(id, resolve);
     },
     clear() {
+      console.log("[IDB] FileCache.clear");
       return db.clear(store);
     },
     keys() {
