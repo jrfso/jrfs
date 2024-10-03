@@ -53,7 +53,10 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
    * functions that READ from FileCache will certainly wait for the result and
    * therefore, we will make them wait until writes are finished before reading.
    *
-   * However, we do not block writes while reading and we depend on IDB to sync.
+   * However, we do not block writes while reading, we depend on IDB to sync it.
+   *
+   * // TODO: Find out if we really, actually need this behavior or if we can
+   * // just wantonly fire off idb queries since idb will synchronize for us...
    */
   async function waitIfWriting(id: string) {
     const writer = writing.get(id);
@@ -100,11 +103,6 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
     return item;
   }
 
-  // async function clearItems() {
-  //   console.log("[IDB] FileCache.clear");
-  //   return db.clear(store);
-  // }
-
   function onDataChange(change: FileDataChange) {
     const { entry, data } = change;
     const hasValue = typeof data !== "undefined";
@@ -118,16 +116,6 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
 
   function onTreeChange(changes: FileTreeChange) {
     const { id, /*tx,op,added,changed,*/ removed, patch } = changes;
-    // console.log(`[IDB] onTreeChange`, logFileTreeChange(changes));
-    // if (added || changed) {
-    //   const data = tree.data(id);
-    //   if (typeof data !== "undefined") {
-    //     const entry = tree.getEntry(id);
-    //     if (entry) {
-    //       setItem(entry, data);
-    //     }
-    //   }
-    // }
     if (removed) {
       console.log(`[IDB] onTreeChange (removed)`, logFileTreeChange(changes));
       for (const id of removed) {
@@ -139,12 +127,9 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
         getItem(id).then((cached) => {
           if (cached && cached.ctime !== entry.ctime) {
             if (patch.ctime !== cached.ctime) {
-              console.log("[IDB] cache delete", {
-                patchCtime: patch.ctime,
-                cacheCtime: cached.ctime,
-                newCtime: entry.ctime,
-              });
-              // REMOVE out of sync data!
+              console.warn(
+                `[IDB] Cache out of sync removal (onTreeChange) "${id}@${cached.ctime}"`,
+              );
               deleteItem(id);
             } else {
               console.log("[IDB] cache set", id);
@@ -184,7 +169,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
       if (item.ctime !== ctime) {
         // Prune expired item immediately.
         console.warn(
-          `[IDB] FileCache item was out of sync "${id}@${item.ctime}"`,
+          `[IDB] Cache out of sync removal (FileCache.getData) "${id}@${item.ctime}"`,
         );
         await deleteItem(id);
         return undefined;
@@ -195,7 +180,6 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
     async remove() {
       // TODO: Handle blocked callback of deleteDB().
       await deleteDB(dbName);
-      // CONSIDER: We can offer an option to clear items instead of whole db.
     },
   };
   return fileCache;
