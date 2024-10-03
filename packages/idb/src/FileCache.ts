@@ -10,6 +10,7 @@ import {
   logFileTreeChange,
 } from "@jrfs/core";
 import type { FileCacheProvider } from "@jrfs/core/cache";
+import { apply } from "mutative";
 
 export interface IdbFileCacheOptions {
   db?: string;
@@ -116,7 +117,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
   }
 
   function onTreeChange(changes: FileTreeChange) {
-    const { /*id,tx,op,added,changed,*/ removed /*,patch*/ } = changes;
+    const { id, /*tx,op,added,changed,*/ removed, patch } = changes;
     // console.log(`[IDB] onTreeChange`, logFileTreeChange(changes));
     // if (added || changed) {
     //   const data = tree.data(id);
@@ -131,6 +132,29 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
       console.log(`[IDB] onTreeChange (removed)`, logFileTreeChange(changes));
       for (const id of removed) {
         if (isFileId(id)) deleteItem(id);
+      }
+    } else if (patch) {
+      if (typeof tree.data(id) === "undefined") {
+        const entry = tree.getEntry(id)!;
+        getItem(id).then((cached) => {
+          if (cached && cached.ctime !== entry.ctime) {
+            if (patch.ctime !== cached.ctime) {
+              console.log("[IDB] cache delete", {
+                patchCtime: patch.ctime,
+                cacheCtime: cached.ctime,
+                newCtime: entry.ctime,
+              });
+              // REMOVE out of sync data!
+              deleteItem(id);
+            } else {
+              console.log("[IDB] cache set", id);
+              const data = apply(cached.data, patch.patches);
+              setItem(entry, data);
+            }
+          } else {
+            console.log("Cache already updated", id, entry.ctime);
+          }
+        });
       }
     }
   }
