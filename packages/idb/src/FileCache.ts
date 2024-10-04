@@ -91,7 +91,12 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
   function onDataChange(change: FileDataChange) {
     const { entry, data } = change;
     const hasValue = typeof data !== "undefined";
-    console.log(`[IDB] onDataChange`, entry.id, hasValue ? "(SET)" : "(DEL)");
+    console.log(
+      `[IDB] onDataChange`,
+      entry.id,
+      entry.ctime,
+      hasValue ? "(SET)" : "(DEL)",
+    );
     if (hasValue) {
       setItem(entry, data);
     } else {
@@ -133,6 +138,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
           );
           return;
         }
+        console.log(`[IDB] onTreeChange`, id, ctime, "(SET)");
         // TODO: Don't make me import `apply` from "mutative".
         const data = apply(cached.data, patch.patches);
         await trx.store.put({ ctime, data } satisfies FileCacheItem, id);
