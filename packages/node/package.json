@@ -1,6 +1,6 @@
 {
   "name": "@jrfs/node",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "JRFS Node drivers.",
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/node",
@@ -38,6 +38,6 @@
     "watch-build": "node --watch-path=./src --watch-path=../../node_modules/@jrfs/core/lib ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
   "dependencies": {
-    "@jrfs/core": "^0.0.3"
+    "@jrfs/core": "^0.0.4"
   }
 }
