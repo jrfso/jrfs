@@ -33,14 +33,20 @@ import {
 } from "@/internal/types";
 
 export class FileTree {
+  #rid: string;
   #nodes: FileTreeNodes;
   #root: Readonly<FileTreeRoot>;
   #rootPath: string;
   #tx: number;
 
-  constructor(options?: { rootPath?: string; [INTERNAL]?: FileTreeInternal }) {
-    const { rootPath, [INTERNAL]: internal } = options ?? {};
+  constructor(options?: {
+    rootPath?: string;
+    rid?: string;
+    [INTERNAL]?: FileTreeInternal;
+  }) {
+    const { rootPath, rid, [INTERNAL]: internal } = options ?? {};
     this.#rootPath = rootPath ?? "";
+    this.#rid = rid ?? "";
     this.#nodes = internal?.nodes ?? new Map<string, Node>();
     this.#root = internal?.root ?? createRoot();
     this.#tx = internal?.tx ?? 0;
@@ -52,6 +58,13 @@ export class FileTree {
     nodes: {
       enumerable: true,
       get: () => this.#nodes,
+    },
+    rid: {
+      enumerable: true,
+      get: () => this.#rid,
+      set: (value: string) => {
+        this.#rid = value;
+      },
     },
     root: {
       enumerable: true,
@@ -133,6 +146,11 @@ export class FileTree {
   }
   // #endregion
   // #region -- Core
+
+  /** Resource id, a unique id for the file tree resource in an application. */
+  get rid() {
+    return this.#rid;
+  }
 
   protected get nodes() {
     return this.#nodes;

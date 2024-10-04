@@ -210,6 +210,7 @@ function loadClient(socket: WebSocket, tree: FileTree) {
   const initPayload = JSON.stringify(
     notifyOf("open", {
       a: Array.from(tree),
+      rid: tree.rid,
       tx: tree.tx,
     }),
   );
