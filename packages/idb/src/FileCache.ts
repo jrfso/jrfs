@@ -9,13 +9,10 @@
 import { IDBPDatabase, deleteDB, openDB } from "idb";
 import {
   type Entry,
-  type EntryOrId,
   type FileDataChange,
   type FileTree,
   type FileTreeChange,
-  idOrEntryId,
   isFileId,
-  logFileTreeChange,
 } from "@jrfs/core";
 import type { FileCacheProvider } from "@jrfs/core/cache";
 import { apply } from "mutative";
@@ -37,15 +34,8 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
   let unsubFromDataChanges: () => void | undefined;
   let unsubFromTreeChanges: () => void | undefined;
 
-  async function getItem(entryOrId: EntryOrId) {
-    const id = idOrEntryId(entryOrId);
-    return db.get(store, id);
-  }
-
-  async function deleteItem(entryOrId: EntryOrId) {
-    const id = idOrEntryId(entryOrId);
-    console.log("[IDB] FileCache.delete", id);
-    await db.delete(store, id);
+  async function getItem(entry: Entry): Promise<FileCacheItem> {
+    return db.get(store, entry.id);
   }
 
   function deleteIfOutOfSync(
@@ -77,40 +67,26 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
     return probablyOutOfSync;
   }
 
-  async function setItem<T = Readonly<unknown>>(entry: Entry, data: T) {
-    const { id, ctime } = entry;
-    console.log("[IDB] FileCache.set", id, ctime, data);
-    const item: FileCacheItem<T> = {
-      ctime,
-      data,
-    };
-    await db.put(store, item, id);
-    return item;
-  }
-
   function onDataChange(change: FileDataChange) {
     const { entry, data } = change;
     const hasValue = typeof data !== "undefined";
-    console.log(
-      `[IDB] onDataChange`,
-      entry.id,
-      entry.ctime,
-      hasValue ? "(SET)" : "(DEL)",
-    );
+    const { id, ctime } = entry;
+    console.log(`[IDB] onDataChange`, id, ctime, hasValue ? "(SET)" : "(DEL)");
     if (hasValue) {
-      setItem(entry, data);
+      const item = { ctime, data } satisfies FileCacheItem<unknown>;
+      db.put(store, item, id);
     } else {
-      deleteItem(entry);
+      db.delete(store, entry.id);
     }
   }
 
   async function onTreeChange(changes: FileTreeChange) {
     const { id, /*tx,op,added,changed,*/ removed, patch } = changes;
     if (removed) {
-      console.log(`[IDB] onTreeChange (removed)`, logFileTreeChange(changes));
-      for (const id of removed) {
-        if (isFileId(id)) deleteItem(id);
-      }
+      const ids = removed.filter(isFileId);
+      if (ids.length < 1) return;
+      console.log(`[IDB] onTreeChange (remove)`, ids);
+      await db.delete(store, ids);
     } else if (patch) {
       // We only patch our cached item if the tree has no in-memory data for it.
       // This situation happens when the client reads and caches the data, then
