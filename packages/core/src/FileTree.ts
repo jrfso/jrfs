@@ -36,21 +36,10 @@ export class FileTree {
   #rid: string;
   #nodes: FileTreeNodes;
   #root: Readonly<FileTreeRoot>;
-  // #rootPath: string;
   #tx: number;
 
-  constructor(options?: {
-    // rootPath?: string;
-    rid?: string;
-    [INTERNAL]?: FileTreeInternal;
-  }) {
-    const {
-      // rootPath,
-
-      rid,
-      [INTERNAL]: internal,
-    } = options ?? {};
-    // this.#rootPath = rootPath ?? "";
+  constructor(options?: { rid?: string; [INTERNAL]?: FileTreeInternal }) {
+    const { rid, [INTERNAL]: internal } = options ?? {};
     this.#rid = rid ?? "";
     this.#nodes = internal?.nodes ?? new Map<string, Node>();
     this.#root = internal?.root ?? createRoot();
@@ -164,14 +153,6 @@ export class FileTree {
   protected get root() {
     return this.#root;
   }
-
-  // get rootPath() {
-  //   return this.#rootPath;
-  // }
-
-  // protected set rootPath(value: string) {
-  //   this.#rootPath = value;
-  // }
   /** Current transaction number set by the driver. */
   get tx() {
     return this.#tx;
@@ -549,19 +530,6 @@ export class FileTree {
     }
     return this.getNodeDepth(node);
   }
-  // /** Gets the full path to the given `entry` or the root path if no `entry`. */
-  // fullPath(entry?: EntryOrId | null) {
-  //   if (!entry) return this.rootPath;
-  //   if (typeof entry === "string") {
-  //     const node = this.getEntry(entry);
-  //     if (!node) return this.rootPath;
-  //     const nodePath = this.path(node) ?? "";
-  //     return concatPath(this.rootPath, nodePath);
-  //   } else {
-  //     const nodePath = this.path(entry) ?? "";
-  //     return concatPath(this.rootPath, nodePath);
-  //   }
-  // }
   /**
    * Returns the path for the given node id and `undefined` if id not found.
    */
