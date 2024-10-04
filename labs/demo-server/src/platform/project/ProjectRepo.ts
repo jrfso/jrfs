@@ -14,7 +14,7 @@ export class ProjectRepo extends Repository<ProjectFileTypes, "fs"> {
       fileTypes: new TypeboxFileTypes(),
     });
     (this as any)[Symbol.toStringTag] = `ProjectRepo("${configFilePath}")`;
-    this.fileTypes.set(ProjectFileTypes);
+    this.fs.fileTypes.set(ProjectFileTypes);
     // this.server = new Server<ProjectFileTypes>(this);
   }
 }

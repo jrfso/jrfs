@@ -23,6 +23,6 @@ export class ProjectRepo extends Repository<ProjectFileTypes, "web"> {
       fileTypes: new TypeboxFileTypes(),
     });
     (this as any)[Symbol.toStringTag] = `ProjectRepo("/project/repo/")`;
-    this.fileTypes.set(ProjectFileTypes);
+    this.fs.fileTypes.set(ProjectFileTypes);
   }
 }
