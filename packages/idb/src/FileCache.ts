@@ -1,3 +1,11 @@
+/**
+ * @file A file cache with IndexedDB.
+ *
+ * References:
+ * - [idb on github](https://github.com/jakearchibald/idb)
+ * - [How to use idb, a 1kb package that makes IndexedDB easy](https://hackernoon.com/use-indexeddb-with-idb-a-1kb-library-that-makes-it-easy-8p1f3yqq)
+ *
+ */
 import { IDBPDatabase, deleteDB, openDB } from "idb";
 import {
   type Entry,
@@ -114,7 +122,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
     }
   }
 
-  function onTreeChange(changes: FileTreeChange) {
+  async function onTreeChange(changes: FileTreeChange) {
     const { id, /*tx,op,added,changed,*/ removed, patch } = changes;
     if (removed) {
       console.log(`[IDB] onTreeChange (removed)`, logFileTreeChange(changes));
@@ -122,26 +130,66 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
         if (isFileId(id)) deleteItem(id);
       }
     } else if (patch) {
+      // We only patch our cached item if the tree has no in-memory data for it.
+      // This situation happens when the client reads and caches the data, then
+      // refreshes the page.
+      //
+      // If the tree DOES have in-memory data (from a read), then the
+      // WritableFileTree.sync will do the patch and our cache will be updated
+      // shortly in our onDataChange handler. To avoid double cache writes, in
+      // that situation, we don't patch the cache item here.
+      //
       if (typeof tree.data(id) === "undefined") {
         const entry = tree.getEntry(id)!;
-        getItem(id).then((cached) => {
-          if (cached && cached.ctime !== entry.ctime) {
-            if (patch.ctime !== cached.ctime) {
-              console.warn(
-                `[IDB] Cache out of sync removal (onTreeChange) "${id}@${cached.ctime}"`,
-              );
-              deleteItem(id);
-            } else {
-              console.log("[IDB] cache set", id);
-              const data = apply(cached.data, patch.patches);
-              setItem(entry, data);
-            }
-          } else {
-            console.log("Cache already updated", id, entry.ctime);
-          }
-        });
+        const { ctime } = entry;
+        const trx = db.transaction(store, "readwrite");
+        const cached = (await trx.store.get(id)) as FileCacheItem;
+        if (cached && cached.ctime === ctime) {
+          console.log("Cache already updated", id, ctime);
+          return;
+        }
+        if (patch.ctime !== cached.ctime) {
+          await trx.store.delete(id);
+          console.warn(
+            `[IDB] Detected out of sync cache in [onTreeChange]->` +
+              `"${id}@${ctime}".`,
+          );
+          return;
+        }
+        // TODO: Don't make me import `apply` from "mutative".
+        const data = apply(cached.data, patch.patches);
+        await trx.store.put({ ctime, data } satisfies FileCacheItem, id);
       }
     }
+  }
+
+  function removeOutOfSync(
+    cached: FileCacheItem,
+    entry: Entry,
+    caller?: string,
+  ): boolean {
+    const { id } = entry;
+    async function removeIfOutOfSync() {
+      // In a transaction, check the cached item again to ensure out of sync.
+      const trx = db.transaction(store, "readwrite");
+      const cached = (await trx.store.get(id)) as FileCacheItem;
+      if (cached) {
+        const { ctime } = cached;
+        const current = tree.getEntry(id);
+        const remove = !current || current.ctime !== ctime;
+        if (!remove) return;
+        // Prune expired item immediately.
+        await trx.store.delete(id);
+        console.warn(
+          `[IDB] Detected out of sync cache in [${caller}]->"${id}@${ctime}".`,
+        );
+      }
+    }
+    const probablyOutOfSync = cached.ctime !== entry.ctime;
+    if (probablyOutOfSync) {
+      removeIfOutOfSync();
+    }
+    return probablyOutOfSync;
   }
 
   const fileCache: FileCacheProvider = {
@@ -163,15 +211,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
     async getData<T = unknown>(entry: Entry) {
       // Cached item?
       const item = await getItem(entry);
-      if (!item) return undefined;
-      // Matches current timestamp?
-      const { id, ctime } = entry;
-      if (item.ctime !== ctime) {
-        // Prune expired item immediately.
-        console.warn(
-          `[IDB] Cache out of sync removal (FileCache.getData) "${id}@${item.ctime}"`,
-        );
-        await deleteItem(id);
+      if (!item || removeOutOfSync(item, entry, "FileCache.getData")) {
         return undefined;
       }
       // Return cached data.

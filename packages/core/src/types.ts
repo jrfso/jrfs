@@ -18,6 +18,7 @@ export interface FileTreeChange {
   removed?: string[];
 
   patch?: {
+    /** Original file ctime, before patch. */
     ctime: number;
     patches: MutativePatches;
     undo?: MutativePatches;
