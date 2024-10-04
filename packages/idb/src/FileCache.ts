@@ -48,6 +48,35 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
     await db.delete(store, id);
   }
 
+  function deleteIfOutOfSync(
+    cached: FileCacheItem,
+    entry: Entry,
+    caller?: string,
+  ): boolean {
+    const { id } = entry;
+    async function deleteIfReallyOutOfSync() {
+      // In a transaction, check the cached item again to ensure out of sync.
+      const trx = db.transaction(store, "readwrite");
+      const cached = (await trx.store.get(id)) as FileCacheItem;
+      if (cached) {
+        const { ctime } = cached;
+        const current = tree.getEntry(id);
+        const remove = !current || current.ctime !== ctime;
+        if (!remove) return;
+        // Prune expired item immediately.
+        await trx.store.delete(id);
+        console.warn(
+          `[IDB] Detected out of sync cache in [${caller}]->"${id}@${ctime}".`,
+        );
+      }
+    }
+    const probablyOutOfSync = cached.ctime !== entry.ctime;
+    if (probablyOutOfSync) {
+      deleteIfReallyOutOfSync();
+    }
+    return probablyOutOfSync;
+  }
+
   async function setItem<T = Readonly<unknown>>(entry: Entry, data: T) {
     const { id, ctime } = entry;
     console.log("[IDB] FileCache.set", id, ctime, data);
@@ -111,35 +140,6 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
     }
   }
 
-  function removeOutOfSync(
-    cached: FileCacheItem,
-    entry: Entry,
-    caller?: string,
-  ): boolean {
-    const { id } = entry;
-    async function removeIfOutOfSync() {
-      // In a transaction, check the cached item again to ensure out of sync.
-      const trx = db.transaction(store, "readwrite");
-      const cached = (await trx.store.get(id)) as FileCacheItem;
-      if (cached) {
-        const { ctime } = cached;
-        const current = tree.getEntry(id);
-        const remove = !current || current.ctime !== ctime;
-        if (!remove) return;
-        // Prune expired item immediately.
-        await trx.store.delete(id);
-        console.warn(
-          `[IDB] Detected out of sync cache in [${caller}]->"${id}@${ctime}".`,
-        );
-      }
-    }
-    const probablyOutOfSync = cached.ctime !== entry.ctime;
-    if (probablyOutOfSync) {
-      removeIfOutOfSync();
-    }
-    return probablyOutOfSync;
-  }
-
   const fileCache: FileCacheProvider = {
     async open(fileTree) {
       tree = fileTree;
@@ -159,7 +159,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
     async getData<T = unknown>(entry: Entry) {
       // Cached item?
       const item = await getItem(entry);
-      if (!item || removeOutOfSync(item, entry, "FileCache.getData")) {
+      if (!item || deleteIfOutOfSync(item, entry, "FileCache.getData")) {
         return undefined;
       }
       // Return cached data.
