@@ -32,8 +32,6 @@ import {
   isFileNode,
 } from "@/internal/types";
 
-// TODO: Add onDataChange event.
-
 export class FileTree {
   #nodes: FileTreeNodes;
   #root: Readonly<FileTreeRoot>;

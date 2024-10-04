@@ -148,7 +148,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
       return item.data as T;
     },
     async remove() {
-      // TODO: Handle blocked callback of deleteDB().
+      // CONSIDER: Handle blocked callback of deleteDB?
       await deleteDB(dbName);
     },
   };
