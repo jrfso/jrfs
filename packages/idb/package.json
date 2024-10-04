@@ -1,6 +1,6 @@
 {
   "name": "@jrfs/idb",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "JRFS idb file cache.",
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/idb",
@@ -36,7 +36,7 @@
     "watch-build": "node --watch-path=./src --watch-path=../../node_modules/@jrfs/core/lib ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
   "dependencies": {
-    "@jrfs/core": "^0.1.0",
+    "@jrfs/core": "^0.2.0",
     "idb": "^8.0.0"
   }
 }
