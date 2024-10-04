@@ -269,7 +269,7 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
   ): Promise<Entry> {
     return this.#transaction(async () => {
       const { to, data } = params;
-      // TODO: Better isDir/isFile detection!
+      // CONSIDER: Do we need isDir/isFile signaling for the caller here?
       const isDir = !("data" in params);
       const toPath = this.#fullPath(to);
       console.log("[FS] add", to);
