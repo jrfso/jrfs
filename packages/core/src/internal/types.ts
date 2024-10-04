@@ -42,6 +42,7 @@ export interface FileNode<D = unknown> extends BaseNode {
 
 export interface FileTreeInternal {
   readonly nodes: FileTreeNodes;
+  rid: string;
   root: Readonly<FileTreeRoot>;
   tx: number;
   onDataChange(change: FileDataChange): void;

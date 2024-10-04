@@ -21,8 +21,6 @@ declare module "@jrfs/core" {
   }
 }
 
-// TODO: Send ctime + patches for write json data to server.
-
 export class WebDriver<FT extends FileTypes<FT>> extends Driver<FT> {
   /** The repo configuration. */
   #client: WebClient;

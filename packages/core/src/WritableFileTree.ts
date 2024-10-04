@@ -78,6 +78,14 @@ export class WritableFileTree extends FileTree {
     this.#target = baseTree;
   }
 
+  get createShortId() {
+    return this.#createShortId;
+  }
+
+  override get rid() {
+    return this.#target.rid;
+  }
+
   /** Gets the target {@link FileTree} that is being written to. */
   get target() {
     return this.#target;
@@ -776,16 +784,18 @@ export class WritableFileTree extends FileTree {
     const rootChildren = sortChildren(rootItems, items as FileTreeNodes);
     this.setRootNode(createRoot(rootChildren));
     this.setTx(builder.tx);
+    this.#base.rid = builder.rid;
     return cbResult;
   }
 
   // CONSIDER: Merge build and open methods, they do the same thing.
 
-  open(params: { entries: Entry[]; tx: number }) {
-    const { entries, tx } = params;
+  open(params: { entries: Entry[]; rid: string; tx: number }) {
+    const { entries, rid, tx } = params;
 
     // DO NOT call #base.onChange UNLIKE normal Node Transactions.
     this.setTx(tx);
+    this.#base.rid = rid;
 
     // ASSUMPTION: None of the calls ahead will trigger FileTree.onChange.
 
@@ -815,6 +825,7 @@ interface DirBuilder extends NodeBuilder {
 }
 
 interface FileTreeBuilder {
+  rid: string;
   tx: number;
   add(name: string, info: NodeOptions): NodeEntry;
 }
@@ -828,6 +839,7 @@ function createFileTreeBuilder(
   createShortId: CreateShortIdFunction,
 ) {
   const builder: FileTreeBuilder = {
+    rid: "",
     tx: 0,
     add(
       name: string,

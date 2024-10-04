@@ -114,7 +114,7 @@ export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
     } else if (msg.to === "open") {
       const open = msg.of;
       console.log("[WS] OPENING...");
-      tree.open({ entries: open.a, tx: open.tx });
+      tree.open({ entries: open.a, rid: open.rid, tx: open.tx });
       if (waitingForOpen) {
         console.log("[WS] OPEN");
         const resolveOpen = waitingForOpen[0];

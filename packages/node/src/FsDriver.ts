@@ -15,7 +15,7 @@ import {
   registerDriver,
 } from "@jrfs/core";
 // Local
-import { FsConfig, IdsFile } from "./types";
+import { FsConfig, FsIndexData, FsIndexDefaultFileExtension } from "./types";
 
 declare module "@jrfs/core" {
   interface DriverTypes<FT extends FileTypes<FT>> {
@@ -38,10 +38,10 @@ export interface FsDriverOptions extends Partial<FsConfig> {
 export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
   /** The repo configuration. */
   #config: FsConfig;
-  /** The repo configuration file path. */
+  /** Full path to the config file, if any. */
   #configFile: string | undefined;
-  /** Full path to an ids file, if any. */
-  #idsPath: string | undefined;
+  /** Full path to an index file, if any. */
+  #indexFile: string | undefined;
   /** Depth of the root children in the absolute fs {@link #rootPath}. */
   #rootChildDepth = 0;
   /** Full root file-system path. */
@@ -53,7 +53,7 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
     props: DriverProps<FT>,
     optionsOrConfigPath: string | FsDriverOptions,
   ) {
-    const { config, configFile, rootPath, idsPath } =
+    const { config, configFile, rootPath, indexFile } =
       openConfig(optionsOrConfigPath);
     super(props);
 
@@ -63,8 +63,8 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
     this.#rootPath = rootPath;
     this.#config = config;
     this.#configFile = configFile;
-    if (idsPath) {
-      this.#idsPath = idsPath;
+    if (indexFile) {
+      this.#indexFile = indexFile;
     }
   }
 
@@ -74,21 +74,21 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
 
   // #region -- Lifecycle
 
-  async #loadIdsFile(): Promise<IdsFile | undefined> {
-    const idsPath = this.#idsPath;
-    if (!idsPath) {
+  async #loadIndexFile(): Promise<FsIndexData | undefined> {
+    const indexFile = this.#indexFile;
+    if (!indexFile) {
       return undefined;
     }
-    if (!FS.existsSync(idsPath)) {
+    if (!FS.existsSync(indexFile)) {
       return undefined;
     }
-    const idsFileJson = (await FSP.readFile(idsPath)).toString();
-    const idsFile = JSON.parse(idsFileJson) as IdsFile;
-    return idsFile;
+    const json = (await FSP.readFile(indexFile)).toString();
+    const indexFileData = JSON.parse(json) as FsIndexData;
+    return indexFileData;
   }
   /** Handles closing the repo. */
   override async onClose() {
-    await this.#writeIdsFileIfSet();
+    await this.#writeIndexIfSet();
   }
   /**
    * Loads all directories and files within the root path using cached ids
@@ -107,10 +107,10 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
           }
         },
       );
-      // CONSIDER: Write new config file on open or somewhere else?
       await this.#writeConfigFileIfNew();
+      const indexFileData = await this.#loadIndexFile();
       // Load any existing ids so we can assign stable ids to srcNodes.
-      const idsFile = await this.#loadIdsFile();
+      const srcIds = indexFileData?.node;
       /** Source file-system nodes read via `glob`. */
       const srcNodes = (
         await glob(
@@ -147,7 +147,7 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
         const isRootDepth = depth === rootChildDepth;
         const pathFromRoot = srcNode.relativePosix();
         const nodeOptions: NodeOptions = {
-          id: idsFile?.[pathFromRoot],
+          id: srcIds?.[pathFromRoot],
           isDir: isDirectory,
           stats: {
             ctime: srcNode.ctime ?? new Date(),
@@ -184,6 +184,7 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
           dirsByPath.set(pathFromRoot, node);
         }
       }
+      files.rid = indexFileData?.rid ?? this.fileTree.createShortId(16);
     });
   }
 
@@ -197,19 +198,23 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
     }
   }
 
-  async #writeIdsFileIfSet() {
+  async #writeIndexIfSet() {
     const { fileTree } = this;
-    const idsPath = this.#idsPath;
-    if (!idsPath) {
+    const indexFile = this.#indexFile;
+    if (!indexFile) {
       return;
     }
-    const idsFile: IdsFile = {};
+    const nodeIds: FsIndexData["node"] = {};
+    const indexFileData: FsIndexData = {
+      rid: fileTree.rid,
+      node: nodeIds,
+    };
     for (const node of fileTree) {
       const path = fileTree.path(node)!;
-      idsFile[path] = node.id;
+      nodeIds[path] = node.id;
     }
-    const idsFileJson = JSON.stringify(idsFile, undefined, 2);
-    await FSP.writeFile(idsPath, idsFileJson);
+    const json = JSON.stringify(indexFileData, undefined, 2);
+    await FSP.writeFile(indexFile, json);
   }
   // #endregion
   // #region -- Core
@@ -401,19 +406,24 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
     root: "./data",
     ...configDefaults,
   };
-  let idsPath = config?.ids;
+  let indexFile = config?.index;
   if (configFile && configDir) {
     if (FS.existsSync(configFile)) {
       const configJson = FS.readFileSync(configFile).toString();
       config = JSON.parse(configJson) as FsConfig;
-      idsPath = config.ids;
+      indexFile = config.index;
     }
-    if (!idsPath && idsPath !== false) {
+    if (!indexFile && indexFile !== false) {
       const configExt = Path.extname(configFile);
-      idsPath = Path.basename(configFile, configExt) + ".ids" + configExt;
-      // e.g. idsPath "projectDb.ids.json" for config file "projectDb.json"
-      idsPath = Path.resolve(configDir, idsPath);
+      // Create e.g. "projectDb.idx.json" for config file "projectDb.json"
+      indexFile =
+        Path.basename(configFile, configExt) + FsIndexDefaultFileExtension;
     }
+    if (indexFile) {
+      indexFile = Path.resolve(configDir, indexFile);
+    }
+  } else if (indexFile) {
+    indexFile = Path.resolve(indexFile);
   }
   // Get the main data path, ensure it exists.
   const rootPath = configDir
@@ -426,8 +436,8 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
     configDir,
     /** Full path to the config file, if any. */
     configFile,
-    /** Full path to the configured ids file, if any. */
-    idsPath,
+    /** Full path to the configured index file, if any. */
+    indexFile,
     /** Full path to the root data directory. */
     rootPath,
   };

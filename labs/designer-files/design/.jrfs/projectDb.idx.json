@@ -1,0 +1,28 @@
+{
+  "rid": "inlxvq7pbxfmru3m",
+  "node": {
+    "assets": "d5l4qpznsa",
+    "assets/sample-content.md": "f7o2x7chgk",
+    "backend": "dhnifxb5z4",
+    "backend/_.dir.json": "fcn700q0jd",
+    "backend/api-server": "dtiasag8x3",
+    "backend/api-server/_.server.json": "fozhjbesr1",
+    "backend/api-server/api": "d9vdtuuktk",
+    "backend/api-server/api/bar": "dei0vnhlck",
+    "backend/api-server/api/bar/_.api.json": "fnopxvq87x",
+    "backend/api-server/api/foo": "dg2ydfhu03",
+    "backend/api-server/api/foo/_.api.json": "frrkj314pd",
+    "backend/db": "dve3gc3m5z",
+    "backend/db/main": "dsf6qz79qc",
+    "backend/db/main/_.db.json": "fmruxyq7e6",
+    "backend/db/main/tables": "dwkliyycjm",
+    "backend/db/main/tables/roles.db-table.json": "finly15s12",
+    "backend/db/main/tables/users.db-table.json": "f2ekcmhfnz",
+    "frontend": "dwsrqz3h7m",
+    "frontend/_.dir.json": "ft7pbxl1zy",
+    "frontend/app1": "d2vjryywjv",
+    "frontend/app1/_.app.json": "flxnde1g1y",
+    "frontend/app2": "dge6a0pyki",
+    "frontend/app2/_.app.json": "ffdamcyian"
+  }
+}

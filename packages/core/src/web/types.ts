@@ -91,6 +91,8 @@ export interface DataResult {
 export interface OpenNotification {
   /** Add entries. */
   a: NonNullable<FileTreeChange["added"]>;
+  /** Resource id, a unique id for the file tree resource in an application. */
+  rid: string;
   /** Initial transaction number, set when Init is complete. */
   tx: number;
 }

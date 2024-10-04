@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import Path from "node:path";
 import { performance as perf } from "node:perf_hooks";
 import FS from "node:fs/promises";
+import chalk from "chalk";
 import { build } from "esbuild";
 import { glob } from "glob";
 import minimist from "minimist";
@@ -293,14 +294,18 @@ async function main() {
         shell: "/bin/bash",
       },
     )
-      .catch((err) => ({ err }))
+      .catch((err) => ({ stderr: err?.stderr || err?.stdout || "" + err }))
       .then(
         /** @param {Partial<Record<"err" | "stderr" | "stdout", any>>} param0 */
         ({ err, stderr, stdout }) => {
           done();
-          if (err) console.error("" + err, { err });
-          if (stderr) console.error(stderr);
-          if (stdout) console.log(stdout);
+          if (err)
+            console.log("\n" + chalk.redBright("Error\n\n" + err, { err }));
+          if (stderr)
+            console.log(
+              "\n" + chalk.redBright("Error\n\n" + ("" + stderr).trim()),
+            );
+          if (stdout) console.log(("" + stdout).trim());
         },
       );
   }
