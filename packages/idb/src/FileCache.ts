@@ -36,78 +36,26 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
   let tree = null! as FileTree;
   let unsubFromDataChanges: () => void | undefined;
   let unsubFromTreeChanges: () => void | undefined;
-  const writing = new Map<string, Promise<void>>();
-
-  function doneWriting(id: string, next: () => void, ctime = -1) {
-    writing.delete(id);
-    console.log("[IDB] Wrote", id, ctime);
-    next();
-  }
-
-  function startWriting(id: string, ctime = -1) {
-    let callbacks!: PromiseCallbacks;
-    writing.set(
-      id,
-      new Promise<void>((resolve, reject) => {
-        callbacks = [resolve, reject];
-      }),
-    );
-    console.log("[IDB] Writing", id, ctime);
-    return callbacks;
-  }
-  /**
-   * This function is needed since WritableFileTree writes are synchronous, so
-   * they don't wait for FileCache write operations to finish. Meanwhile, any
-   * functions that READ from FileCache will certainly wait for the result and
-   * therefore, we will make them wait until writes are finished before reading.
-   *
-   * However, we do not block writes while reading, we depend on IDB to sync it.
-   *
-   * // TODO: Find out if we really, actually need this behavior or if we can
-   * // just wantonly fire off idb queries since idb will synchronize for us...
-   */
-  async function waitIfWriting(id: string) {
-    const writer = writing.get(id);
-    if (!writer) return;
-    await writer;
-  }
 
   async function getItem(entryOrId: EntryOrId) {
     const id = idOrEntryId(entryOrId);
-    await waitIfWriting(id);
     return db.get(store, id);
   }
 
   async function deleteItem(entryOrId: EntryOrId) {
     const id = idOrEntryId(entryOrId);
     console.log("[IDB] FileCache.delete", id);
-    await waitIfWriting(id);
-    const [resolve, reject] = startWriting(id);
-    try {
-      await db.delete(store, id);
-    } catch (ex) {
-      doneWriting(id, () => reject(ex));
-      throw ex;
-    }
-    doneWriting(id, resolve);
+    await db.delete(store, id);
   }
 
   async function setItem<T = Readonly<unknown>>(entry: Entry, data: T) {
     const { id, ctime } = entry;
     console.log("[IDB] FileCache.set", id, ctime, data);
-    await waitIfWriting(id);
-    const [resolve, reject] = startWriting(id, ctime);
     const item: FileCacheItem<T> = {
       ctime,
       data,
     };
-    try {
-      await db.put(store, item, id);
-    } catch (ex) {
-      doneWriting(id, () => reject(ex), ctime);
-      throw ex;
-    }
-    doneWriting(id, resolve, ctime);
+    await db.put(store, item, id);
     return item;
   }
 
@@ -224,6 +172,3 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
   };
   return fileCache;
 }
-
-/** `[resolve, reject]` */
-type PromiseCallbacks = [(result?: any) => void, (reason?: any) => void];
