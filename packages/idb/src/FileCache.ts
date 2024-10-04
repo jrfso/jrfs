@@ -28,8 +28,9 @@ interface FileCacheItem<T = Readonly<unknown>> {
 }
 
 export function createFileCache(options: IdbFileCacheOptions = {}) {
-  const { db: dbName = "fcache", store = "fdata" } = options;
+  const { db: defaultDbName = "jrfs_fc", store = "fc" } = options;
   let db = null! as IDBPDatabase<unknown>;
+  let dbName = null! as string;
   let tree = null! as FileTree;
   let unsubFromDataChanges: () => void | undefined;
   let unsubFromTreeChanges: () => void | undefined;
@@ -125,6 +126,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
   const fileCache: FileCacheProvider = {
     async open(fileTree) {
       tree = fileTree;
+      dbName = defaultDbName + (!tree.rid ? "" : "_" + tree.rid);
       db = await openDB(dbName, 1, {
         upgrade(db, oldVersion, newVersion, tx, event) {
           db.createObjectStore(store);
