@@ -1,4 +1,3 @@
-import { apply, create as createDataProxy } from "mutative";
 // Local
 import {
   type Entry,
@@ -8,6 +7,7 @@ import {
   type MutativePatches,
   type NodeInfo,
 } from "@/types";
+import { applyPatch, createPatchProxy } from "@/helpers";
 import { INTERNAL, isDirectoryNode } from "@/internal/types";
 import type { Driver, TransactionOutParams } from "@/Driver";
 import { FileTree } from "@/FileTree";
@@ -212,7 +212,7 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
       // caller can handle it.
       throw new Error(`Entry cannot be patched "${to}".`);
     }
-    const data = apply(origData, patches);
+    const data = applyPatch(origData, patches);
     return this.#driver.write(
       {
         to,
@@ -294,7 +294,7 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
     }
     if (typeof writerOrData === "function") {
       const writer = writerOrData;
-      const [draft, finalizeDraft] = createDataProxy(origData, {
+      const [draft, finalizeDraft] = createPatchProxy(origData, {
         enablePatches: true,
       });
       // CONSIDER: We can also let the writer return the whole data to write.

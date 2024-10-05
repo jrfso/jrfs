@@ -12,10 +12,10 @@ import {
   type FileDataChange,
   type FileTree,
   type FileTreeChange,
+  applyPatch,
   isFileId,
 } from "@jrfs/core";
 import type { FileCacheProvider } from "@jrfs/core/cache";
-import { apply } from "mutative";
 
 export interface IdbFileCacheOptions {
   db?: string;
@@ -116,8 +116,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
           return;
         }
         console.log(`[IDB] onTreeChange`, id, ctime, "(SET)");
-        // TODO: Don't make me import `apply` from "mutative".
-        const data = apply(cached.data, patch.patches);
+        const data = applyPatch(cached.data, patch.patches);
         await trx.store.put({ ctime, data } satisfies FileCacheItem, id);
       }
     }

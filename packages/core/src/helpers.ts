@@ -1,3 +1,7 @@
+import { apply as applyPatch, create as createPatchProxy } from "mutative";
+
+export { applyPatch, createPatchProxy };
+
 const ALPHANUMLOWER = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 /**
