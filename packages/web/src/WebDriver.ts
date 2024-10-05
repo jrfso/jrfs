@@ -1,12 +1,12 @@
 import {
+  type DriverProps,
+  type Entry,
+  type FileTree,
+  type FileTypes,
+  type TransactionOutParams,
+  type TransactionParams,
   Driver,
-  Entry,
-  FileTypes,
-  // Node,
-  TransactionParams,
-  DriverProps,
   registerDriver,
-  TransactionOutParams,
 } from "@jrfs/core";
 import { FileCacheProvider } from "@jrfs/core/cache";
 // Local
@@ -162,7 +162,7 @@ function createWebDriver<FT extends FileTypes<FT>>(
 registerDriver("web", createWebDriver);
 
 async function fsAction(
-  tree: DriverProps["fileTree"],
+  tree: FileTree,
   action: Promise<{ id: string; tx: number }>,
   out?: TransactionOutParams,
 ): Promise<Entry> {

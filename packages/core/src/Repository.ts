@@ -1,6 +1,5 @@
 // Local
 import type { FileTypes } from "@/types";
-import { INTERNAL } from "@/internal/types";
 import type {
   Driver,
   DriverFactory,
@@ -38,22 +37,19 @@ export class Repository<
       fileTypes,
       createShortId = defaultCreateShortId,
     } = options;
-    const callbacks = {} as { setDriver(value: Driver): void };
-    const fs = FileSystem[INTERNAL].create<FT>({
-      fileTypes,
-      callbacks,
-    });
     const driverFactory = getDriverFactory(driverType);
     const driverOptions = options[driverType];
     const driver = driverFactory(
       {
         createShortId,
-        fileTree: fs,
         fileTypes,
       },
       driverOptions,
     );
-    callbacks.setDriver(driver);
+    const fs = new FileSystem<FT>({
+      driver,
+      fileTypes,
+    });
     this.#driver = driver;
     this.#fs = fs;
     // Set object name for the default `toString` implementation.
@@ -79,7 +75,7 @@ export class Repository<
    * Loads all directories and files within the repo path.
    */
   async open() {
-    return this.#driver.open();
+    return this.#driver.open(this.#fs);
   }
   // #endregion
   // #region -- Diagnostics

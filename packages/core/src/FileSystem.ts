@@ -8,7 +8,7 @@ import {
   type NodeInfo,
 } from "@/types";
 import { applyPatch, createPatchProxy } from "@/helpers";
-import { INTERNAL, isDirectoryNode } from "@/internal/types";
+import { isDirectoryNode } from "@/internal/types";
 import type { Driver, TransactionOutParams } from "@/Driver";
 import { FileTree } from "@/FileTree";
 import { FileTypeProvider } from "@/FileTypeProvider";
@@ -32,35 +32,13 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
   #driver = null! as Driver;
   #fileTypes: FileTypeProvider<FT>;
 
-  private constructor(options: { fileTypes: FileTypeProvider<FT> }) {
+  constructor(props: { driver: Driver; fileTypes: FileTypeProvider<FT> }) {
     super();
-    const { fileTypes } = options;
+    const { driver, fileTypes } = props;
+    this.#driver = driver;
     this.#fileTypes = fileTypes;
   }
 
-  // #region -- Internal
-  static #internal = {
-    create<FT extends FileTypes<FT>>(options: {
-      fileTypes: FileTypeProvider<FT>;
-      callbacks: {
-        setDriver: (value: Driver) => void;
-      };
-    }) {
-      const { fileTypes, callbacks } = options;
-      const fs = new FileSystem<FT>({
-        fileTypes,
-      });
-      callbacks.setDriver = (value: Driver) => {
-        fs.#driver = value;
-        (fs as any)[Symbol.toStringTag] = `FileSystem(${value})`;
-      };
-      return fs;
-    },
-  };
-  static get [INTERNAL]() {
-    return FileSystem.#internal;
-  }
-  // #endregion
   // #region -- Props
 
   get fileTypes() {

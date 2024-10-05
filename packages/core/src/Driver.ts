@@ -11,20 +11,14 @@ import { WritableFileTree } from "@/WritableFileTree";
 
 /** Base JRFS driver class. */
 export abstract class Driver {
-  #fileTree: WritableFileTree;
+  #createShortId: CreateShortIdFunction;
+  #fileTree = null! as WritableFileTree;
   #fileTypes: FileTypeProvider<any>;
   /** `true` if {@link open}, `false` if {@link close}d */
   #opened = false;
 
   constructor(props: DriverProps) {
-    // TODO: Create #fileTree in open() or when fileTree is set INTERNAL-ly.
-    // That way we can remove DriverProps.fileTree and then we can create
-    // FileSystem without callbacks AFTER the driver in Repository constructor.
-
-    this.#fileTree = WritableFileTree[INTERNAL].create(
-      props.fileTree,
-      props.createShortId,
-    );
+    this.#createShortId = props.createShortId;
     this.#fileTypes = props.fileTypes;
   }
 
@@ -66,11 +60,15 @@ export abstract class Driver {
   /** Handles opening the repo. */
   protected abstract onOpen(): Promise<void>;
 
-  async open() {
+  async open(fileTree: FileTree) {
     const opened = this.#opened;
     if (opened) {
       throw new Error(`Driver has already opened ${this}`);
     }
+    this.#fileTree = WritableFileTree[INTERNAL].create(
+      fileTree,
+      this.#createShortId,
+    );
     await this.onOpen();
     // Save state.
     this.#opened = true;
@@ -172,7 +170,6 @@ export type DriverFactory = (props: DriverProps, options: any) => Driver;
 export interface DriverProps {
   createShortId: CreateShortIdFunction;
   fileTypes: FileTypeProvider<any>;
-  fileTree: FileTree;
 }
 /**
  * Interface to declare a driver options types onto.
