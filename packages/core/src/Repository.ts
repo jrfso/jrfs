@@ -20,16 +20,14 @@ import {
  * Each key should be registered via {@link FileTypeProvider} later.
  * Each value must be in the shape of a `FileOf<Instance, Meta?>` type.
  * @template DK Driver key used in constructor option.
- * @template DT Driver type from `DriverTypes<FT>[DK]` else `Driver<FT>`.
+ * @template DT Driver type from `DriverTypes[DK]` else `Driver`.
  */
 export class Repository<
   FT extends FileTypes<FT>,
-  DK extends keyof DriverTypes<FT> & string = keyof DriverTypes<FT>,
-  DT extends Driver<FT> = DriverTypes<FT>[DK] extends Driver<FT>
-    ? DriverTypes<FT>[DK]
-    : Driver<FT>,
+  DK extends keyof DriverTypes & string = keyof DriverTypes,
+  DT extends Driver = DriverTypes[DK] extends Driver ? DriverTypes[DK] : Driver,
 > {
-  #driver: Driver<FT>;
+  #driver: Driver;
   #fs: FileSystem<FT>;
 
   constructor(
@@ -40,14 +38,14 @@ export class Repository<
       fileTypes,
       createShortId = defaultCreateShortId,
     } = options;
-    const callbacks = {} as { setDriver(value: Driver<FT>): void };
+    const callbacks = {} as { setDriver(value: Driver): void };
     const fs = FileSystem[INTERNAL].create<FT>({
       fileTypes,
       callbacks,
     });
     const driverFactory = getDriverFactory(driverType);
     const driverOptions = options[driverType];
-    const driver = driverFactory<FT>(
+    const driver = driverFactory(
       {
         createShortId,
         fileTree: fs,
@@ -97,7 +95,7 @@ export class Repository<
 /** Options to create a {@link Repository}. */
 export interface RepositoryOptions<
   FT extends FileTypes<FT>,
-  DK extends keyof DriverTypes<FT> & string = keyof DriverTypes<FT>,
+  DK extends keyof DriverTypes & string = keyof DriverTypes,
 > {
   /** Name of the driver type to use. */
   driver: DK;
@@ -110,7 +108,7 @@ export interface RepositoryOptions<
 const driverFactories: Record<string, DriverFactory> = {};
 
 export function getDriverFactory<FT extends FileTypes<FT>>(
-  driverType: keyof DriverTypes<FT> & string,
+  driverType: keyof DriverTypes & string,
 ) {
   const driverFactory = driverFactories[driverType];
   if (!driverFactory) {
@@ -124,7 +122,7 @@ export function getDriverFactory<FT extends FileTypes<FT>>(
  * @param name Driver to register. Also see the TS declaration example below.
  * @param factory Function to create the driver instance.
  */
-export function registerDriver<K extends string = keyof DriverTypes<any>>(
+export function registerDriver<K extends string = keyof DriverTypes>(
   name: K,
   factory: DriverFactory,
 ) {

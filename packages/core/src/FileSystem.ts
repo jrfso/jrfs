@@ -27,13 +27,9 @@ import { FileTypeProvider } from "@/FileTypeProvider";
 /**
  * The top level file tree interface provided by a Repository.
  * @template FT File Types interface, to map file type names to TS types.
- * Each key should be registered via {@link fileTypes} later.
- * Each value must be in the shape of a `FileOf<Instance, Meta?>` type.
- * @template DK Driver key used in constructor option.
- * @template DT Driver type from `DriverTypes<FT>[DK]` else `Driver<FT>`.
  */
 export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
-  #driver = null! as Driver<FT>;
+  #driver = null! as Driver;
   #fileTypes: FileTypeProvider<FT>;
 
   private constructor(options: { fileTypes: FileTypeProvider<FT> }) {
@@ -47,14 +43,14 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
     create<FT extends FileTypes<FT>>(options: {
       fileTypes: FileTypeProvider<FT>;
       callbacks: {
-        setDriver: (value: Driver<FT>) => void;
+        setDriver: (value: Driver) => void;
       };
     }) {
       const { fileTypes, callbacks } = options;
       const fs = new FileSystem<FT>({
         fileTypes,
       });
-      callbacks.setDriver = (value: Driver<FT>) => {
+      callbacks.setDriver = (value: Driver) => {
         fs.#driver = value;
         (fs as any)[Symbol.toStringTag] = `FileSystem(${value})`;
       };
