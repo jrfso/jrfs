@@ -1,6 +1,6 @@
 {
   "name": "@jrfs/typebox",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "JRFS TypeBox integration.",
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/typebox",
@@ -36,7 +36,7 @@
     "watch": "node --watch-path=./src --watch-path=../../node_modules/@jrfs/core/lib ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
   "dependencies": {
-    "@jrfs/core": "^0.2.0"
+    "@jrfs/core": "^0.3.0"
   },
   "devDependencies": {
     "@sinclair/typebox": "^0.33.7"
