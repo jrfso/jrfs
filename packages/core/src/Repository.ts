@@ -30,7 +30,7 @@ export class Repository<
     : Driver<FT>,
 > {
   #driver: Driver<FT>;
-  #fs: FileSystem<FT, DK>;
+  #fs: FileSystem<FT>;
 
   constructor(
     options: RepositoryOptions<FT, DK> & Partial<Pick<DriverTypeOptions, DK>>,
@@ -41,7 +41,7 @@ export class Repository<
       createShortId = defaultCreateShortId,
     } = options;
     const callbacks = {} as { setDriver(value: Driver<FT>): void };
-    const fs = FileSystem[INTERNAL].create<FT, DK>({
+    const fs = FileSystem[INTERNAL].create<FT>({
       fileTypes,
       callbacks,
     });

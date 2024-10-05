@@ -9,7 +9,7 @@ import {
   type NodeInfo,
 } from "@/types";
 import { INTERNAL, isDirectoryNode } from "@/internal/types";
-import type { Driver, DriverTypes, TransactionOutParams } from "@/Driver";
+import type { Driver, TransactionOutParams } from "@/Driver";
 import { FileTree } from "@/FileTree";
 import { FileTypeProvider } from "@/FileTypeProvider";
 
@@ -32,13 +32,7 @@ import { FileTypeProvider } from "@/FileTypeProvider";
  * @template DK Driver key used in constructor option.
  * @template DT Driver type from `DriverTypes<FT>[DK]` else `Driver<FT>`.
  */
-export class FileSystem<
-  FT extends FileTypes<FT>,
-  DK extends keyof DriverTypes<FT> & string = keyof DriverTypes<FT>,
-  DT extends Driver<FT> = DriverTypes<FT>[DK] extends Driver<FT>
-    ? DriverTypes<FT>[DK]
-    : Driver<FT>,
-> extends FileTree {
+export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
   #driver = null! as Driver<FT>;
   #fileTypes: FileTypeProvider<FT>;
 
@@ -50,21 +44,19 @@ export class FileSystem<
 
   // #region -- Internal
   static #internal = {
-    create<
-      FT extends FileTypes<FT>,
-      DK extends keyof DriverTypes<FT> & string = keyof DriverTypes<FT>,
-    >(options: {
+    create<FT extends FileTypes<FT>>(options: {
       fileTypes: FileTypeProvider<FT>;
       callbacks: {
         setDriver: (value: Driver<FT>) => void;
       };
     }) {
       const { fileTypes, callbacks } = options;
-      const fs = new FileSystem<FT, DK>({
+      const fs = new FileSystem<FT>({
         fileTypes,
       });
       callbacks.setDriver = (value: Driver<FT>) => {
         fs.#driver = value;
+        (fs as any)[Symbol.toStringTag] = `FileSystem(${value})`;
       };
       return fs;
     },
@@ -74,10 +66,6 @@ export class FileSystem<
   }
   // #endregion
   // #region -- Props
-  /** The driver interface of the configured implementation. */
-  get driver(): DT {
-    return this.#driver as DT;
-  }
 
   get fileTypes() {
     return this.#fileTypes;
@@ -167,7 +155,7 @@ export class FileSystem<
       };
     }
     // Get from driver.
-    const result = await this.driver.get({ from, fromEntry: entry });
+    const result = await this.#driver.get({ from, fromEntry: entry });
     return result;
   }
 
