@@ -1,6 +1,6 @@
 {
   "name": "jrfs-root",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "JRFS monorepo workspace",
   "license": "UNLICENSED",
   "private": true,
