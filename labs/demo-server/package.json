@@ -31,8 +31,8 @@
     "start-win": "nodemon",
     "start-bin": "node bin/jrfs-demo-server.cjs",
     "test": "echo 'Sorry, no tests yet!'",
-    "watch": "tsc -w --noEmit --pretty --skipLibCheck --project tsconfig.eslint.json",
-    "watch-build": "node --watch-path=./src --watch-path=../../node_modules/@jrfs ../../scripts/build-esm.mjs"
+    "watch": "node --watch-path=./src --watch-path=../../node_modules/@jrfs ../../scripts/build-esm.mjs",
+    "watch-ts": "tsc -w --noEmit --pretty --skipLibCheck --project tsconfig.eslint.json"
   },
   "nodemonConfig": {
     "delay": "250ms",

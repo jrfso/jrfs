@@ -1,6 +1,5 @@
 // Local
 import type { FileTypes } from "@/types";
-import { INTERNAL } from "@/internal/types";
 import type {
   Driver,
   DriverFactory,
@@ -20,17 +19,15 @@ import {
  * Each key should be registered via {@link FileTypeProvider} later.
  * Each value must be in the shape of a `FileOf<Instance, Meta?>` type.
  * @template DK Driver key used in constructor option.
- * @template DT Driver type from `DriverTypes<FT>[DK]` else `Driver<FT>`.
+ * @template DT Driver type from `DriverTypes[DK]` else `Driver`.
  */
 export class Repository<
   FT extends FileTypes<FT>,
-  DK extends keyof DriverTypes<FT> & string = keyof DriverTypes<FT>,
-  DT extends Driver<FT> = DriverTypes<FT>[DK] extends Driver<FT>
-    ? DriverTypes<FT>[DK]
-    : Driver<FT>,
+  DK extends keyof DriverTypes & string = keyof DriverTypes,
+  DT extends Driver = DriverTypes[DK] extends Driver ? DriverTypes[DK] : Driver,
 > {
-  #driver: Driver<FT>;
-  #fs: FileSystem<FT, DK>;
+  #driver: Driver;
+  #fs: FileSystem<FT>;
 
   constructor(
     options: RepositoryOptions<FT, DK> & Partial<Pick<DriverTypeOptions, DK>>,
@@ -40,22 +37,19 @@ export class Repository<
       fileTypes,
       createShortId = defaultCreateShortId,
     } = options;
-    const callbacks = {} as { setDriver(value: Driver<FT>): void };
-    const fs = FileSystem[INTERNAL].create<FT, DK>({
-      fileTypes,
-      callbacks,
-    });
     const driverFactory = getDriverFactory(driverType);
     const driverOptions = options[driverType];
-    const driver = driverFactory<FT>(
+    const driver = driverFactory(
       {
         createShortId,
-        fileTree: fs,
         fileTypes,
       },
       driverOptions,
     );
-    callbacks.setDriver(driver);
+    const fs = new FileSystem<FT>({
+      driver,
+      fileTypes,
+    });
     this.#driver = driver;
     this.#fs = fs;
     // Set object name for the default `toString` implementation.
@@ -81,7 +75,7 @@ export class Repository<
    * Loads all directories and files within the repo path.
    */
   async open() {
-    return this.#driver.open();
+    return this.#driver.open(this.#fs);
   }
   // #endregion
   // #region -- Diagnostics
@@ -97,7 +91,7 @@ export class Repository<
 /** Options to create a {@link Repository}. */
 export interface RepositoryOptions<
   FT extends FileTypes<FT>,
-  DK extends keyof DriverTypes<FT> & string = keyof DriverTypes<FT>,
+  DK extends keyof DriverTypes & string = keyof DriverTypes,
 > {
   /** Name of the driver type to use. */
   driver: DK;
@@ -110,7 +104,7 @@ export interface RepositoryOptions<
 const driverFactories: Record<string, DriverFactory> = {};
 
 export function getDriverFactory<FT extends FileTypes<FT>>(
-  driverType: keyof DriverTypes<FT> & string,
+  driverType: keyof DriverTypes & string,
 ) {
   const driverFactory = driverFactories[driverType];
   if (!driverFactory) {
@@ -124,7 +118,7 @@ export function getDriverFactory<FT extends FileTypes<FT>>(
  * @param name Driver to register. Also see the TS declaration example below.
  * @param factory Function to create the driver instance.
  */
-export function registerDriver<K extends string = keyof DriverTypes<any>>(
+export function registerDriver<K extends string = keyof DriverTypes>(
   name: K,
   factory: DriverFactory,
 ) {

@@ -1,12 +1,12 @@
 import {
+  type DriverProps,
+  type Entry,
+  type FileTree,
+  type FileTypes,
+  type TransactionOutParams,
+  type TransactionParams,
   Driver,
-  Entry,
-  FileTypes,
-  // Node,
-  TransactionParams,
-  DriverProps,
   registerDriver,
-  TransactionOutParams,
 } from "@jrfs/core";
 import { FileCacheProvider } from "@jrfs/core/cache";
 // Local
@@ -16,17 +16,17 @@ declare module "@jrfs/core" {
   interface DriverTypeOptions {
     web: WebDriverConfig;
   }
-  interface DriverTypes<FT extends FileTypes<FT>> {
-    web: WebDriver<FT>;
+  interface DriverTypes {
+    web: WebDriver;
   }
 }
 
-export class WebDriver<FT extends FileTypes<FT>> extends Driver<FT> {
+export class WebDriver extends Driver {
   /** The repo configuration. */
   #client: WebClient;
   #cache: FileCacheProvider | undefined;
 
-  constructor(props: DriverProps<FT>, config: WebDriverConfig) {
+  constructor(props: DriverProps, config: WebDriverConfig) {
     super(props);
     // Set object name for the default `toString` implementation.
     (this as any)[Symbol.toStringTag] = `WebDriver`;
@@ -154,15 +154,15 @@ export interface WebDriverConfig {
 (WebDriver as any)[Symbol.toStringTag] = "WebDriver";
 
 function createWebDriver<FT extends FileTypes<FT>>(
-  props: DriverProps<FT>,
+  props: DriverProps,
   config: WebDriverConfig,
-): WebDriver<FT> {
-  return new WebDriver<FT>(props, config);
+): WebDriver {
+  return new WebDriver(props, config);
 }
 registerDriver("web", createWebDriver);
 
 async function fsAction(
-  tree: DriverProps<any>["fileTree"],
+  tree: FileTree,
   action: Promise<{ id: string; tx: number }>,
   out?: TransactionOutParams,
 ): Promise<Entry> {

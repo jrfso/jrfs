@@ -1,4 +1,3 @@
-import { apply, create as createDataProxy } from "mutative";
 // Local
 import {
   type Entry,
@@ -8,8 +7,9 @@ import {
   type MutativePatches,
   type NodeInfo,
 } from "@/types";
-import { INTERNAL, isDirectoryNode } from "@/internal/types";
-import type { Driver, DriverTypes, TransactionOutParams } from "@/Driver";
+import { applyPatch, createPatch } from "@/helpers";
+import { isDirectoryNode } from "@/internal/types";
+import type { Driver, TransactionOutParams } from "@/Driver";
 import { FileTree } from "@/FileTree";
 import { FileTypeProvider } from "@/FileTypeProvider";
 
@@ -20,6 +20,8 @@ import { FileTypeProvider } from "@/FileTypeProvider";
 // CONSIDER: Misc transactions...
 // - appendFile (could be good for letting client write a text log?)
 
+// TODO: A method to get a download url for any file.
+
 // TODO: Add a `realpath` type method in the FileSystem class.
 // - On the client, it should return the full real FS path from the server.
 // - On the server, it should return the full real FS path.
@@ -27,57 +29,19 @@ import { FileTypeProvider } from "@/FileTypeProvider";
 /**
  * The top level file tree interface provided by a Repository.
  * @template FT File Types interface, to map file type names to TS types.
- * Each key should be registered via {@link fileTypes} later.
- * Each value must be in the shape of a `FileOf<Instance, Meta?>` type.
- * @template DK Driver key used in constructor option.
- * @template DT Driver type from `DriverTypes<FT>[DK]` else `Driver<FT>`.
  */
-export class FileSystem<
-  FT extends FileTypes<FT>,
-  DK extends keyof DriverTypes<FT> & string = keyof DriverTypes<FT>,
-  DT extends Driver<FT> = DriverTypes<FT>[DK] extends Driver<FT>
-    ? DriverTypes<FT>[DK]
-    : Driver<FT>,
-> extends FileTree {
-  #driver = null! as Driver<FT>;
+export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
+  #driver = null! as Driver;
   #fileTypes: FileTypeProvider<FT>;
 
-  private constructor(options: { fileTypes: FileTypeProvider<FT> }) {
+  constructor(props: { driver: Driver; fileTypes: FileTypeProvider<FT> }) {
     super();
-    const { fileTypes } = options;
+    const { driver, fileTypes } = props;
+    this.#driver = driver;
     this.#fileTypes = fileTypes;
   }
 
-  // #region -- Internal
-  static #internal = {
-    create<
-      FT extends FileTypes<FT>,
-      DK extends keyof DriverTypes<FT> & string = keyof DriverTypes<FT>,
-    >(options: {
-      fileTypes: FileTypeProvider<FT>;
-      callbacks: {
-        setDriver: (value: Driver<FT>) => void;
-      };
-    }) {
-      const { fileTypes, callbacks } = options;
-      const fs = new FileSystem<FT, DK>({
-        fileTypes,
-      });
-      callbacks.setDriver = (value: Driver<FT>) => {
-        fs.#driver = value;
-      };
-      return fs;
-    },
-  };
-  static get [INTERNAL]() {
-    return FileSystem.#internal;
-  }
-  // #endregion
   // #region -- Props
-  /** The driver interface of the configured implementation. */
-  get driver(): DT {
-    return this.#driver as DT;
-  }
 
   get fileTypes() {
     return this.#fileTypes;
@@ -167,7 +131,7 @@ export class FileSystem<
       };
     }
     // Get from driver.
-    const result = await this.driver.get({ from, fromEntry: entry });
+    const result = await this.#driver.get({ from, fromEntry: entry });
     return result;
   }
 
@@ -228,7 +192,7 @@ export class FileSystem<
       // caller can handle it.
       throw new Error(`Entry cannot be patched "${to}".`);
     }
-    const data = apply(origData, patches);
+    const data = applyPatch(origData, patches);
     return this.#driver.write(
       {
         to,
@@ -285,7 +249,7 @@ export class FileSystem<
    */
   async write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
     entry: EntryOrPath,
-    writer: (data: D) => void | Promise<void>,
+    writer: (data: D) => D | Promise<D> | void | Promise<void>,
     out?: TransactionOutParams,
   ): Promise<Entry>;
   /**
@@ -299,7 +263,9 @@ export class FileSystem<
   ): Promise<Entry>;
   async write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
     entry: EntryOrPath,
-    writerOrData: ((data: D) => void | Promise<void>) | Readonly<D>,
+    writerOrData:
+      | ((data: D) => D | Promise<D> | void | Promise<void>)
+      | Readonly<D>,
     out?: TransactionOutParams,
   ): Promise<Entry> {
     const { path: to, node: toNode } = this.fileEntry(entry);
@@ -309,17 +275,13 @@ export class FileSystem<
       origData = (await this.get(toEntry)).data as D;
     }
     if (typeof writerOrData === "function") {
-      const writer = writerOrData;
-      const [draft, finalizeDraft] = createDataProxy(origData, {
-        enablePatches: true,
-      });
-      // CONSIDER: We can also let the writer return the whole data to write.
-      const dataOrPromise = writer(draft as D);
-      if (dataOrPromise && typeof dataOrPromise.then === "function") {
-        await dataOrPromise;
-      }
-      // Get whole data and patches for driver to decide which to send/write...
-      const [data, patches, undo] = finalizeDraft();
+      // We don't need mutative's Draft<D> here to remove readonly from D's
+      // properties since D represents a mutable type already.
+      const writer = writerOrData as (
+        // data: Draft<T> is default, but for local cast skip the type import.
+        data: unknown,
+      ) => D | Promise<D> | void | Promise<void>;
+      const [data, patches, undo] = await createPatch(origData, writer);
       if (patches.length < 1) {
         // No change.
         return toEntry;

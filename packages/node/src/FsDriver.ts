@@ -18,8 +18,8 @@ import {
 import { FsConfig, FsIndexData, FsIndexDefaultFileExtension } from "./types";
 
 declare module "@jrfs/core" {
-  interface DriverTypes<FT extends FileTypes<FT>> {
-    fs: FsDriver<FT>;
+  interface DriverTypes {
+    fs: FsDriver;
   }
   interface DriverTypeOptions {
     /** An absolute config file path or fs config options. */
@@ -35,7 +35,7 @@ export interface FsDriverOptions extends Partial<FsConfig> {
 // CONSIDER: Save tx in order to sync between restarts! Apply it inside onOpen
 // in the fileTree.build() block by setting files.tx = txFromFile;
 
-export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
+export class FsDriver extends Driver {
   /** The repo configuration. */
   #config: FsConfig;
   /** Full path to the config file, if any. */
@@ -50,7 +50,7 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
   #transactions: Transactions = { queue: [] };
 
   constructor(
-    props: DriverProps<FT>,
+    props: DriverProps,
     optionsOrConfigPath: string | FsDriverOptions,
   ) {
     const { config, configFile, rootPath, indexFile } =
@@ -269,7 +269,7 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
   ): Promise<Entry> {
     return this.#transaction(async () => {
       const { to, data } = params;
-      // TODO: Better isDir/isFile detection!
+      // CONSIDER: Do we need isDir/isFile signaling for the caller here?
       const isDir = !("data" in params);
       const toPath = this.#fullPath(to);
       console.log("[FS] add", to);
@@ -385,10 +385,10 @@ export class FsDriver<FT extends FileTypes<FT>> extends Driver<FT> {
 (FsDriver as any)[Symbol.toStringTag] = "FsDriver";
 
 function createFsDriver<FT extends FileTypes<FT>>(
-  props: DriverProps<FT>,
+  props: DriverProps,
   optionsOrConfigPath: string | FsDriverOptions,
-): FsDriver<FT> {
-  return new FsDriver<FT>(props, optionsOrConfigPath);
+): FsDriver {
+  return new FsDriver(props, optionsOrConfigPath);
 }
 registerDriver("fs", createFsDriver);
 

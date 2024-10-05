@@ -3,7 +3,6 @@ import type {
   Entry,
   FileTree,
   FileTypeProvider,
-  FileTypes,
   MutativePatches,
 } from "@/index";
 import { type CreateShortIdFunction } from "@/helpers";
@@ -11,17 +10,15 @@ import { INTERNAL } from "@/internal/types";
 import { WritableFileTree } from "@/WritableFileTree";
 
 /** Base JRFS driver class. */
-export abstract class Driver<FT extends FileTypes<FT>> {
-  #fileTree: WritableFileTree;
-  #fileTypes: FileTypeProvider<FT>;
+export abstract class Driver {
+  #createShortId: CreateShortIdFunction;
+  #fileTree = null! as WritableFileTree;
+  #fileTypes: FileTypeProvider<any>;
   /** `true` if {@link open}, `false` if {@link close}d */
   #opened = false;
 
-  constructor(props: DriverProps<FT>) {
-    this.#fileTree = WritableFileTree[INTERNAL].create(
-      props.fileTree,
-      props.createShortId,
-    );
+  constructor(props: DriverProps) {
+    this.#createShortId = props.createShortId;
     this.#fileTypes = props.fileTypes;
   }
 
@@ -63,11 +60,15 @@ export abstract class Driver<FT extends FileTypes<FT>> {
   /** Handles opening the repo. */
   protected abstract onOpen(): Promise<void>;
 
-  async open() {
+  async open(fileTree: FileTree) {
     const opened = this.#opened;
     if (opened) {
       throw new Error(`Driver has already opened ${this}`);
     }
+    this.#fileTree = WritableFileTree[INTERNAL].create(
+      fileTree,
+      this.#createShortId,
+    );
     await this.onOpen();
     // Save state.
     this.#opened = true;
@@ -164,15 +165,11 @@ export interface TransactionParams {
 }
 
 /** Callback to create a driver. */
-export type DriverFactory = <FT extends FileTypes<FT>>(
-  props: DriverProps<FT>,
-  options: any,
-) => Driver<FT>;
+export type DriverFactory = (props: DriverProps, options: any) => Driver;
 
-export interface DriverProps<FT extends FileTypes<FT>> {
+export interface DriverProps {
   createShortId: CreateShortIdFunction;
-  fileTypes: FileTypeProvider<FT>;
-  fileTree: FileTree;
+  fileTypes: FileTypeProvider<any>;
 }
 /**
  * Interface to declare a driver options types onto.
@@ -187,9 +184,6 @@ export interface DriverTypeOptions {
   // e.g. ["fs"]: FsDriverOptions;
 }
 /** Interface to declare driver types onto. */
-export interface DriverTypes<
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  FT extends FileTypes<FT>,
-> {
+export interface DriverTypes {
   // e.g. ["fs"]: FsDriver;
 }

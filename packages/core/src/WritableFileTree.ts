@@ -1,6 +1,5 @@
-import { apply } from "mutative";
 // Local
-import { type CreateShortIdFunction, deepFreeze } from "@/helpers";
+import { type CreateShortIdFunction, applyPatch, deepFreeze } from "@/helpers";
 import {
   Node,
   INTERNAL,
@@ -689,7 +688,7 @@ export class WritableFileTree extends FileTree {
             } else {
               // Patch away since the original patch ctime matches our ctime.
               dataProps = {
-                data: apply(node.data, patch.patches),
+                data: applyPatch(node.data, patch.patches),
               };
             }
           }
