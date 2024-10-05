@@ -33,7 +33,7 @@
     "lint-fix": "eslint . --ext .ts --fix",
     "lint-ts": "tsc --noEmit --pretty --project ./tsconfig.eslint.json",
     "rm-build": "shx rm -rf lib/*",
-    "watch-build": "node --watch-path=./src --watch-path=../../node_modules/@jrfs/core/lib ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
+    "watch": "node --watch-path=./src --watch-path=../../node_modules/@jrfs/core/lib ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
   "dependencies": {
     "@jrfs/core": "^0.2.0"
