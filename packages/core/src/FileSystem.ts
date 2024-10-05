@@ -275,11 +275,13 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
       origData = (await this.get(toEntry)).data as D;
     }
     if (typeof writerOrData === "function") {
-      const writer = writerOrData;
-      const [data, patches, undo] = await createPatch(
-        origData,
-        writer as (data: unknown) => D | Promise<D> | void | Promise<void>,
-      );
+      // We don't need mutative's Draft<D> here to remove readonly from D's
+      // properties since D represents a mutable type already.
+      const writer = writerOrData as (
+        // data: Draft<T> is default, but for local cast skip the type import.
+        data: unknown,
+      ) => D | Promise<D> | void | Promise<void>;
+      const [data, patches, undo] = await createPatch(origData, writer);
       if (patches.length < 1) {
         // No change.
         return toEntry;
