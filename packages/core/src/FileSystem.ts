@@ -20,6 +20,8 @@ import { FileTypeProvider } from "@/FileTypeProvider";
 // CONSIDER: Misc transactions...
 // - appendFile (could be good for letting client write a text log?)
 
+// TODO: A method to get a download url for any file.
+
 // TODO: Add a `realpath` type method in the FileSystem class.
 // - On the client, it should return the full real FS path from the server.
 // - On the server, it should return the full real FS path.
