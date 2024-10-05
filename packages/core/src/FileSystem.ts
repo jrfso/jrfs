@@ -7,7 +7,7 @@ import {
   type MutativePatches,
   type NodeInfo,
 } from "@/types";
-import { applyPatch, createPatchProxy } from "@/helpers";
+import { applyPatch, createPatch } from "@/helpers";
 import { isDirectoryNode } from "@/internal/types";
 import type { Driver, TransactionOutParams } from "@/Driver";
 import { FileTree } from "@/FileTree";
@@ -249,7 +249,7 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
    */
   async write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
     entry: EntryOrPath,
-    writer: (data: D) => void | Promise<void>,
+    writer: (data: D) => D | Promise<D> | void | Promise<void>,
     out?: TransactionOutParams,
   ): Promise<Entry>;
   /**
@@ -263,7 +263,9 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
   ): Promise<Entry>;
   async write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
     entry: EntryOrPath,
-    writerOrData: ((data: D) => void | Promise<void>) | Readonly<D>,
+    writerOrData:
+      | ((data: D) => D | Promise<D> | void | Promise<void>)
+      | Readonly<D>,
     out?: TransactionOutParams,
   ): Promise<Entry> {
     const { path: to, node: toNode } = this.fileEntry(entry);
@@ -274,16 +276,10 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
     }
     if (typeof writerOrData === "function") {
       const writer = writerOrData;
-      const [draft, finalizeDraft] = createPatchProxy(origData, {
-        enablePatches: true,
-      });
-      // CONSIDER: We can also let the writer return the whole data to write.
-      const dataOrPromise = writer(draft as D);
-      if (dataOrPromise && typeof dataOrPromise.then === "function") {
-        await dataOrPromise;
-      }
-      // Get whole data and patches for driver to decide which to send/write...
-      const [data, patches, undo] = finalizeDraft();
+      const [data, patches, undo] = await createPatch(
+        origData,
+        writer as (data: unknown) => D | Promise<D> | void | Promise<void>,
+      );
       if (patches.length < 1) {
         // No change.
         return toEntry;

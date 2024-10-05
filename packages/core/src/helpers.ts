@@ -1,6 +1,47 @@
-import { apply as applyPatch, create as createPatchProxy } from "mutative";
+import { apply as applyPatch, rawReturn, makeCreator } from "mutative";
 
-export { applyPatch, createPatchProxy };
+// #region Mutative
+
+export { applyPatch, rawReturn };
+/**
+ * Creates patches to apply to a JS object. Creates new state from a base state.
+ *
+ * See [mutative.js](https://mutative.js.org/docs/api-reference/create)
+ *
+ * ```ts
+ * createPatch(baseState,
+ *   (draft) => unknown | Promise<unknown>
+ * ) => unknown | Promise<unknown>;
+ * ```
+ *
+ * ## Example
+ *
+ * ```ts
+ * import { createPatch, rawReturn } from '@jrfs/core';
+ *
+ * const baseState = { foo: { bar: 'str' }, arr: [] };
+ * const state = create(
+ *   baseState,
+ *   (draft) => {
+ *     draft.foo.bar = 'str2';
+ *     // or return { ...draft, foo:{bar:'str2'} };
+ *     // or return rawReturn({ foo:{bar:'str2'}, arr:[] });
+ *   },
+ * );
+ *
+ * expect(state).toEqual({ foo: { bar: 'str2' }, arr: [] });
+ * expect(state).not.toBe(baseState);
+ * expect(state.foo).not.toBe(baseState.foo);
+ * expect(state.arr).toBe(baseState.arr);
+ * ```
+ */
+export const createPatch = makeCreator({
+  enableAutoFreeze: true,
+  enablePatches: true,
+  strict: process.env.NODE_ENV === "development",
+});
+// #endregion
+// #region createShortId
 
 const ALPHANUMLOWER = "0123456789abcdefghijklmnopqrstuvwxyz";
 
@@ -26,6 +67,8 @@ export function createShortId(length: number = 9): string {
   return id;
 }
 export type CreateShortIdFunction = typeof createShortId;
+
+// #endregion
 
 /**
  * Deep `Object.freeze()`, works with Map and Set. From
