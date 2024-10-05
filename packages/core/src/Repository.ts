@@ -13,6 +13,11 @@ import {
   createShortId as defaultCreateShortId,
 } from "@/helpers";
 
+// TODO: Add a method to register new websocket message (and send/receive fn).
+// - Method can be middleware in @jrfs/(web|ws) with module augmentation.
+// - Needs middleware expando interface and expando property in Repository.
+// - New middleware options can be passed to constructor.
+
 /**
  * Provides access to a JSON repo/file system from client or server.
  * @template FT File Types interface, to map file type names to TS types.
