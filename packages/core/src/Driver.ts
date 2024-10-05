@@ -17,6 +17,10 @@ export abstract class Driver {
   #opened = false;
 
   constructor(props: DriverProps) {
+    // TODO: Create #fileTree in open() or when fileTree is set INTERNAL-ly.
+    // That way we can remove DriverProps.fileTree and then we can create
+    // FileSystem without callbacks AFTER the driver in Repository constructor.
+
     this.#fileTree = WritableFileTree[INTERNAL].create(
       props.fileTree,
       props.createShortId,
