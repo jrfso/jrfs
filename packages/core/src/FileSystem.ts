@@ -120,19 +120,24 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
     );
   }
 
-  async get(target: EntryOrPath) {
+  async get<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+    target: EntryOrPath,
+  ): Promise<{
+    entry: Entry;
+    data: Readonly<D>;
+  }> {
     const { path: from, node: fromNode } = this.fileEntry(target);
     const { entry } = fromNode;
     // In memory?
     if (typeof fromNode.data !== "undefined") {
       return {
         entry,
-        data: fromNode.data,
+        data: fromNode.data as Readonly<D>,
       };
     }
     // Get from driver.
     const result = await this.#driver.get({ from, fromEntry: entry });
-    return result;
+    return result as { entry: Entry; data: Readonly<D> };
   }
 
   async move(
@@ -242,7 +247,6 @@ export class FileSystem<FT extends FileTypes<FT>> extends FileTree {
       out,
     );
   }
-
   /**
    * Writes to an existing file with your `writer` function.
    * @template T `FileType` name OR the `data` type to write.
