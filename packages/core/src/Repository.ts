@@ -36,16 +36,13 @@ import {
  * @template DK Driver key used in constructor option.
  * @template DT Driver type from `DriverTypes[DK]` else `Driver`.
  */
-export class Repository<
-  FT extends FileTypes<FT>,
-  DK extends keyof DriverTypes & string = keyof DriverTypes,
-  DT extends Driver = DriverTypes[DK] extends Driver ? DriverTypes[DK] : Driver,
-> {
+export class Repository<FT extends FileTypes<FT>> {
   #driver: Driver;
   #fs: FileSystem<FT>;
 
   constructor(
-    options: RepositoryOptions<FT, DK> & Partial<Pick<DriverTypeOptions, DK>>,
+    options: RepositoryOptions<FT> &
+      Partial<Pick<DriverTypeOptions, RepositoryOptions<FT>["driver"]>>,
   ) {
     const {
       driver: driverType,
@@ -72,8 +69,8 @@ export class Repository<
   }
   // #region -- Props
   /** The driver interface of the configured implementation. */
-  get driver(): DT {
-    return this.#driver as DT;
+  get driver() {
+    return this.#driver;
   }
 
   get fs() {
@@ -104,12 +101,9 @@ export class Repository<
 (Repository as any)[Symbol.toStringTag] = "Repository";
 
 /** Options to create a {@link Repository}. */
-export interface RepositoryOptions<
-  FT extends FileTypes<FT>,
-  DK extends keyof DriverTypes & string = keyof DriverTypes,
-> {
+export interface RepositoryOptions<FT extends FileTypes<FT>> {
   /** Name of the driver type to use. */
-  driver: DK;
+  driver: keyof DriverTypes;
   fileTypes: FileTypeProvider<FT>;
   /** Provide a unique short id generator to create node ids. */
   createShortId?: CreateShortIdFunction;

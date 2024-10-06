@@ -11,7 +11,7 @@ const client = createWebClient<ProjectFileTypes>({
 
 export { ProjectFileTypes };
 
-export class ProjectRepo extends Repository<ProjectFileTypes, "web"> {
+export class ProjectRepo extends Repository<ProjectFileTypes> {
   constructor() {
     super({
       createShortId,

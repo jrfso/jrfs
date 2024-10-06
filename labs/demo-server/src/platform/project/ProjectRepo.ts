@@ -3,7 +3,7 @@ import { TypeboxFileTypes } from "@jrfs/typebox";
 import { ProjectFileTypes } from "demo-shared/platform/project";
 import { createShortId } from "demo-shared/jrfs";
 
-export class ProjectRepo extends Repository<ProjectFileTypes, "fs"> {
+export class ProjectRepo extends Repository<ProjectFileTypes> {
   // readonly server: Server<ProjectFileTypes>;
 
   constructor(configFilePath: string) {
