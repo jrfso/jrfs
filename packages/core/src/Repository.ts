@@ -69,7 +69,7 @@ export class Repository<FT extends FileTypes<FT>> {
   }
   // #region -- Props
   /** The driver interface of the configured implementation. */
-  get driver() {
+  protected get driver() {
     return this.#driver;
   }
 
@@ -97,8 +97,13 @@ export class Repository<FT extends FileTypes<FT>> {
   }
   // #endregion
 }
+// #region -- Diagnostics
+
 // Set object name for the default `toString` implementation.
 (Repository as any)[Symbol.toStringTag] = "Repository";
+
+// #endregion
+// #region -- Options
 
 /** Options to create a {@link Repository}. */
 export interface RepositoryOptions<FT extends FileTypes<FT>> {
@@ -108,6 +113,8 @@ export interface RepositoryOptions<FT extends FileTypes<FT>> {
   /** Provide a unique short id generator to create node ids. */
   createShortId?: CreateShortIdFunction;
 }
+// #endregion
+// #region -- Driver Registration
 
 /** Map of registered driver factory functions. */
 const driverFactories: Record<string, DriverFactory> = {};
@@ -133,3 +140,4 @@ export function registerDriver<K extends string = keyof DriverTypes>(
 ) {
   driverFactories[name] = factory;
 }
+// #endregion
