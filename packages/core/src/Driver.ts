@@ -174,7 +174,7 @@ export interface DriverProps {
 /**
  * Interface to declare a driver options types onto.
  * @example
- * declare module "jrfs" {
+ * declare module "@jrfs/core" {
  *   interface DriverTypeOptions {
  *     fs: FsDriverOptions;
  *   }
