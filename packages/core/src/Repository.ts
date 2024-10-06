@@ -13,10 +13,20 @@ import {
   createShortId as defaultCreateShortId,
 } from "@/helpers";
 
+// TODO: Add a method to register a view.
+// - A file type to match or other filter must be provided.
+// - A function to run after (a batch?) of tree/data changes is needed.
+//   - The function will aggregate tree/data from matching files.
+// - Options for when to run the function can be specified, e.g.
+//   - when the matching file LISTING changes.
+//   - when ANY matching files' data becomes available (or changes).
+//   - when ALL matching files' data becomes available (or changes thereafter).
+// - An option to actively LOAD matching files' data can be specified.
+
 // TODO: Add a method to register new websocket message (and send/receive fn).
-// - Method can be middleware in @jrfs/(web|ws) with module augmentation.
-// - Needs middleware expando interface and expando property in Repository.
-// - New middleware options can be passed to constructor.
+// - Method can be plugin in @jrfs/(web|ws) with module augmentation.
+// - Needs plugin expando interface and expando property in Repository?
+// - New plugin options can be passed to constructor.
 
 /**
  * Provides access to a JSON repo/file system from client or server.
