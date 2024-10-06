@@ -24,10 +24,7 @@ export interface RepositoryView<
   FT extends FileTypes<FT> = FileTypes<any>,
 > {
   (
-    matches: Array<{
-      entry: Entry;
-      data: unknown;
-    }>,
+    matches: { entry: Entry; data: unknown }[],
   ): RepositoryViews[RV] | Promise<RepositoryViews[RV]>;
 }
 
@@ -52,7 +49,7 @@ export function registerRepositoryView<
     name,
     view,
     options: {
-      when: options?.when ?? "any",
+      when: "any",
       ...options,
     } satisfies RepositoryViewOptions<FT>,
   };
