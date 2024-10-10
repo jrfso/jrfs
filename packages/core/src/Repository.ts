@@ -23,6 +23,8 @@ import {
 //   - when ALL matching files' data becomes available (or changes thereafter).
 // - An option to actively LOAD matching files' data can be specified.
 
+// TODO: A plugin system, so dynamic websocket messages can be a plugin.
+
 // TODO: Add a method to register new websocket message (and send/receive fn).
 // - Method can be plugin in @jrfs/(web|ws) with module augmentation.
 // - Needs plugin expando interface and expando property in Repository?
@@ -30,10 +32,14 @@ import {
 
 /**
  * Provides access to a JSON repo/file system from client or server.
- * @template FT File Types interface, to map file type names to TS types.
- * Each key should be registered via {@link FileTypeProvider} later.
- * Each value must be in the shape of a `FileOf<Instance, Meta?>` type.
+ *
+ * @template FT File Types interface mapping file type names to TS types.
+ * Each key of `FT` should be declared as a `FileOf<Instance, Meta?>` and the
+ * corresponding `FileTypeInfo` should be set via {@link FileTypeProvider} in
+ * your `Repository` sub-class' constructor.
+ *
  * @template DK Driver key used in constructor option.
+ *
  * @template DT Driver type from `DriverTypes[DK]` else `Driver`.
  */
 export class Repository<FT extends FileTypes<FT>> {
@@ -67,7 +73,7 @@ export class Repository<FT extends FileTypes<FT>> {
     // Set object name for the default `toString` implementation.
     (this as any)[Symbol.toStringTag] = `Repository(${driver})`;
   }
-  // #region -- Props
+  // #region -- Core
   /** The driver interface of the configured implementation. */
   protected get driver() {
     return this.#driver;
@@ -114,7 +120,7 @@ export interface RepositoryOptions<FT extends FileTypes<FT>> {
   createShortId?: CreateShortIdFunction;
 }
 // #endregion
-// #region -- Driver Registration
+// #region -- Drivers
 
 /** Map of registered driver factory functions. */
 const driverFactories: Record<string, DriverFactory> = {};
