@@ -13,6 +13,8 @@ import {
   createShortId as defaultCreateShortId,
 } from "@/helpers";
 
+// TODO: A dynamic COMMAND system, so websocket messages can simply relay those.
+
 // TODO: Add a method to register a view.
 // - A file type to match or other filter must be provided.
 // - A function to run after (a batch?) of tree/data changes is needed.
@@ -22,13 +24,6 @@ import {
 //   - when ANY matching files' data becomes available (or changes).
 //   - when ALL matching files' data becomes available (or changes thereafter).
 // - An option to actively LOAD matching files' data can be specified.
-
-// TODO: A plugin system, so dynamic websocket messages can be a plugin.
-
-// TODO: Add a method to register new websocket message (and send/receive fn).
-// - Method can be plugin in @jrfs/(web|ws) with module augmentation.
-// - Needs plugin expando interface and expando property in Repository?
-// - New plugin options can be passed to constructor.
 
 /**
  * Provides access to a JSON repo/file system from client or server.
@@ -47,7 +42,7 @@ export class Repository<FT extends FileTypes<FT>> {
   #fs: FileSystem<FT>;
   #plugin: Partial<{
     /** Internal plugin data. One prop per registered plugin. */
-    [Prop in keyof RepositoryPlugins]: RepositoryPlugins[Prop]["data"];
+    [Prop in RepositoryPluginName]: RepositoryPlugins[Prop]["data"];
   }>;
 
   constructor(
@@ -97,7 +92,7 @@ export class Repository<FT extends FileTypes<FT>> {
   get fs() {
     return this.#fs;
   }
-
+  /** Protected plugin data. */
   protected get plugin() {
     return this.#plugin;
   }
