@@ -45,6 +45,10 @@ import {
 export class Repository<FT extends FileTypes<FT>> {
   #driver: Driver;
   #fs: FileSystem<FT>;
+  #plugin: Partial<{
+    /** Internal plugin data. One prop per registered plugin. */
+    [Prop in keyof RepositoryPlugins]: RepositoryPlugins[Prop]["data"];
+  }>;
 
   constructor(
     options: RepositoryOptions<FT> &
@@ -54,6 +58,7 @@ export class Repository<FT extends FileTypes<FT>> {
       driver: driverType,
       fileTypes,
       createShortId = defaultCreateShortId,
+      plugins,
     } = options;
     const driverFactory = getDriverFactory(driverType);
     const driverOptions = options[driverType];
@@ -72,6 +77,16 @@ export class Repository<FT extends FileTypes<FT>> {
     this.#fs = fs;
     // Set object name for the default `toString` implementation.
     (this as any)[Symbol.toStringTag] = `Repository(${driver})`;
+    // Initialize plugins.
+    this.#plugin = {};
+    if (plugins) {
+      for (const name in plugins) {
+        const params = (plugins as Record<string, unknown>)[name];
+        if (params === false) continue;
+        const plugin = getPlugin(name);
+        plugin.call(this, params);
+      }
+    }
   }
   // #region -- Core
   /** The driver interface of the configured implementation. */
@@ -81,6 +96,10 @@ export class Repository<FT extends FileTypes<FT>> {
 
   get fs() {
     return this.#fs;
+  }
+
+  protected get plugin() {
+    return this.#plugin;
   }
   // #endregion
   // #region -- Lifecycle
@@ -118,6 +137,8 @@ export interface RepositoryOptions<FT extends FileTypes<FT>> {
   fileTypes: FileTypeProvider<FT>;
   /** Provide a unique short id generator to create node ids. */
   createShortId?: CreateShortIdFunction;
+
+  plugins?: Record<RepositoryPluginName, RepositoryPluginOf["params"]>;
 }
 // #endregion
 // #region -- Drivers
@@ -146,4 +167,48 @@ export function registerDriver<K extends string = keyof DriverTypes>(
 ) {
   driverFactories[name] = factory;
 }
+// #endregion
+// #region -- Plugins
+
+const repositoryPlugins: Record<string, RepositoryPlugin<any>> = {};
+
+function getPlugin(name: string) {
+  const plugin = repositoryPlugins[name];
+  if (!plugin) {
+    throw new Error(`Plugin not found "${name}".`);
+  }
+  return plugin;
+}
+/**
+ * Registers a plugin to initialize in the {@link Repository} constructor
+ * when enabled in the given {@link RepositoryOptions}.
+ * @param name Name of the plugin to register.
+ * @param plugin Plugin initialization function.
+ */
+export function registerPlugin<N extends RepositoryPluginName>(
+  name: N,
+  plugin: RepositoryPlugin<RepositoryPlugins[N]["params"]>,
+) {
+  repositoryPlugins[name] = plugin;
+}
+
+/** {@link Repository} plugin implementation function. */
+export interface RepositoryPlugin<P = unknown> {
+  (this: Repository<any>, params: P | undefined): void;
+}
+/** Declares the integral types of a {@link RepositoryPlugin}. */
+export interface RepositoryPluginOf<P = undefined, D = unknown> {
+  /** Params passed when calling plugin. A `false` value disables the plugin. */
+  params?: P | boolean;
+  /** Type of the internal data stored in {@link Repository} by the plugin. */
+  data?: D;
+}
+/** Interface to declare global {@link RepositoryPlugin} info onto. */
+export interface RepositoryPlugins {
+  // e.g. myPlugin: RepositoryPluginOf<{foo?:"bar"|"baz"}>;
+}
+/** Plugin name of a plugin registered in {@link RepositoryPlugins} */
+export type RepositoryPluginName = keyof RepositoryPlugins &
+  NonNullable<string>;
+
 // #endregion
