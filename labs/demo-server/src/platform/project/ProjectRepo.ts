@@ -11,10 +11,9 @@ export class ProjectRepo extends Repository<ProjectFileTypes> {
       createShortId,
       driver: "fs",
       fs: configFilePath,
-      fileTypes: new TypeboxFileTypes(),
+      fileTypes: new TypeboxFileTypes().set(ProjectFileTypes),
     });
     (this as any)[Symbol.toStringTag] = `ProjectRepo("${configFilePath}")`;
-    this.fs.fileTypes.set(ProjectFileTypes);
     // this.server = new Server<ProjectFileTypes>(this);
   }
 }

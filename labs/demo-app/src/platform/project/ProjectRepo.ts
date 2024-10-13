@@ -20,9 +20,8 @@ export class ProjectRepo extends Repository<ProjectFileTypes> {
         client,
         fileCache: createFileCache(),
       },
-      fileTypes: new TypeboxFileTypes(),
+      fileTypes: new TypeboxFileTypes().set(ProjectFileTypes),
     });
     (this as any)[Symbol.toStringTag] = `ProjectRepo("/project/repo/")`;
-    this.fs.fileTypes.set(ProjectFileTypes);
   }
 }

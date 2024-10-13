@@ -153,8 +153,6 @@ export function isFileId(id: string): boolean {
 // #endregion
 // #region -- File Types
 
-// See https://gist.github.com/waynebloss/6ff331cb0cc8b7d039fdfabf6e71ebdd
-
 /**
  * Declares the `data` and `meta`data types of a given file-type.
  * @template D `data` Describes the JSON root found in a file of this type.

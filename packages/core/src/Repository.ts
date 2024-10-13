@@ -30,8 +30,8 @@ import {
  *
  * @template FT File Types interface mapping file type names to TS types.
  * Each key of `FT` should be declared as a `FileOf<Instance, Meta?>` and the
- * corresponding `FileTypeInfo` should be set via {@link FileTypeProvider} in
- * your `Repository` sub-class' constructor.
+ * corresponding `FileTypeInfo` should be set in the {@link FileTypeProvider}
+ * supplied to the `Repository`constructor.
  *
  * @template DK Driver key used in constructor option.
  *
