@@ -1,7 +1,7 @@
 // #region -- FileTree
 
 export type FileTreeOperation = "add" | "copy" | "move" | "remove" | "write";
-
+/** Event data for {@link FileTree.onChange}. */
 export interface FileTreeChange {
   /** The transaction type. */
   op: FileTreeOperation;
@@ -24,10 +24,23 @@ export interface FileTreeChange {
     undo?: MutativePatches;
   };
 }
+/** Event data for when a file's data changes. */
+export interface FileDataChange {
+  entry: Entry;
+  data: unknown;
+}
 
 export type FileDataChangeHandler = (change: FileDataChange) => void;
 
 export type FileTreeChangeHandler = (change: FileTreeChange) => void;
+
+export interface MutativePatch {
+  op: "add" | "remove" | "replace";
+  path: (string | number)[];
+  value?: unknown;
+}
+
+export type MutativePatches = MutativePatch[];
 
 export function logFileTreeChange({
   op,
@@ -204,16 +217,3 @@ export interface FileTypeInfo<M = unknown> {
   schema?: any;
 }
 // #endregion
-
-export interface FileDataChange {
-  entry: Entry;
-  data: unknown;
-}
-
-export interface MutativePatch {
-  op: "add" | "remove" | "replace";
-  path: (string | number)[];
-  value?: unknown;
-}
-
-export type MutativePatches = MutativePatch[];
