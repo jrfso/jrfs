@@ -1,3 +1,5 @@
+/** @import { FileTree } from "@/FileTree" */
+
 // #region -- FileTree
 
 export type FileTreeOperation = "add" | "copy" | "move" | "remove" | "write";
@@ -24,7 +26,7 @@ export interface FileTreeChange {
     undo?: MutativePatches;
   };
 }
-/** Event data for when a file's data changes. */
+/** Event data for {@link FileTree.onDataChange} */
 export interface FileDataChange {
   entry: Entry;
   data: unknown;
