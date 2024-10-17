@@ -12,8 +12,8 @@ const REPO_PATH = Path.join(
 
 describe.sequential("Starter lab", () => {
   let repo = null! as ProjectRepo;
-  let addedDir = null! as Awaited<ReturnType<ProjectRepo["fs"]["add"]>>;
-  let addedFile = null! as Awaited<ReturnType<ProjectRepo["fs"]["add"]>>;
+  let addedDir = null! as Awaited<ReturnType<ProjectRepo["add"]>>;
+  let addedFile = null! as Awaited<ReturnType<ProjectRepo["add"]>>;
 
   test("Open repo", async () => {
     console.log(`OPENING repo`, REPO_PATH);
@@ -21,12 +21,12 @@ describe.sequential("Starter lab", () => {
     repo = new ProjectRepo(REPO_PATH);
     await repo.open();
 
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Finding db models", async () => {
     console.log("FINDING db models...");
 
-    const nodes = await repo.fs.findTypes("db");
+    const nodes = await repo.findTypes("db");
     expect(nodes.length).toBeGreaterThanOrEqual(1);
 
     console.log("FOUND", nodes.length, "nodes");
@@ -36,12 +36,12 @@ describe.sequential("Starter lab", () => {
   });
   test("Adding directory", async () => {
     console.log("ADDING DIRECTORY...");
-    addedDir = await repo.fs.add("tests");
+    addedDir = await repo.add("tests");
     console.log("ADDED DIRECTORY", addedDir.id, addedDir.name);
   });
   test("Adding file", async () => {
     console.log("ADDING FILE...");
-    addedFile = await repo.fs.add("my.db.json", {
+    addedFile = await repo.add("my.db.json", {
       parent: addedDir,
       data: {
         a: { name: "a" },
@@ -50,26 +50,26 @@ describe.sequential("Starter lab", () => {
       },
     });
     console.log("ADDED FILE", addedFile.id, addedFile.name, addedFile.pId);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Moving directory", async () => {
     // await timeoutAsync(500);
     console.log("MOVING DIRECTORY...", addedDir.id);
-    addedDir = await repo.fs.move(addedDir, "backend/things/tests");
+    addedDir = await repo.move(addedDir, "backend/things/tests");
     console.log("MOVED DIRECTORY", addedDir.id, "to", addedDir.pId);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Renaming directory", async () => {
     // await timeoutAsync(500);
     console.log("RENAMING DIRECTORY...", addedDir.id);
-    addedDir = await repo.fs.rename(addedDir, "testing");
+    addedDir = await repo.rename(addedDir, "testing");
     console.log("RENAMED DIRECTORY...", addedDir.id, addedDir.name);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Writing file", async () => {
     // await timeoutAsync(500);
     console.log("WRITING TO FILE", addedFile.name, addedFile.ctime);
-    addedFile = await repo.fs.write(
+    addedFile = await repo.write(
       addedFile,
       (data: Record<"a" | "b" | "c", { name: string }>) => {
         data.a.name = "A";
@@ -78,21 +78,21 @@ describe.sequential("Starter lab", () => {
       },
     );
     console.log("WROTE TO FILE", addedFile.name, addedFile.ctime);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Removing directory", async () => {
     console.log("REMOVING DIRECTORY...", addedDir.id, addedDir.name);
-    addedDir = await repo.fs.remove("backend/things");
+    addedDir = await repo.remove("backend/things");
     console.log("REMOVED DIRECTORY...", addedDir.id, addedDir.name);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Add and remove deep directory", async () => {
     console.log("TRY MKDIR...");
-    const deepDir = await repo.fs.add("frontend/app1/foo/bar");
-    await repo.fs.printDirectory();
+    const deepDir = await repo.add("frontend/app1/foo/bar");
+    await repo.files.printDirectory();
     console.log("REMOVING MKDIR...");
-    await repo.fs.remove({ id: deepDir.pId! });
-    await repo.fs.printDirectory();
+    await repo.remove({ id: deepDir.pId! });
+    await repo.files.printDirectory();
   });
   test("Closing db", async () => {
     console.log("CLOSING repo", REPO_PATH);

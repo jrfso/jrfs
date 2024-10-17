@@ -140,6 +140,7 @@ export class WebDriver extends Driver {
     params: TransactionParams["write"],
     out?: TransactionOutParams,
   ): Promise<Entry> {
+    // TODO: The driver can check before sending if patch?.ctime is out of date.
     return fsAction(this.fileTree, this.#client.write(params), out);
   }
   // #endregion

@@ -40,7 +40,7 @@ export default apiController(function projectRepoFsApi(api, options) {
     },
     async function fsAdd({ body }, rep) {
       const res = await transaction((repo, out) =>
-        repo.fs.add(body.to, "data" in body ? { data: body.data } : {}, out),
+        repo.add(body.to, "data" in body ? { data: body.data } : {}, out),
       );
       rep.status(200).send(res);
     },
@@ -63,9 +63,9 @@ export default apiController(function projectRepoFsApi(api, options) {
     async function fsGetJsonData({ body }, rep) {
       const { repo } = projectService;
       const { from } = body;
-      const entry = repo.fs.findPathEntry(from)!;
+      const entry = repo.files.findPathEntry(from)!;
       // TODO: Respond with a 404 if (!entry)...
-      const data = repo.fs.data(entry);
+      const data = repo.files.data(entry);
       // CONSIDER: Should we compare client `ctime` to signal no-change here?
       rep.status(200).send({ id: entry.id, data });
     },
@@ -85,7 +85,7 @@ export default apiController(function projectRepoFsApi(api, options) {
     },
     async function fsMove({ body }, rep) {
       const res = await transaction((repo, out) =>
-        repo.fs.move(body.from, body.to, out),
+        repo.move(body.from, body.to, out),
       );
       rep.status(200).send(res);
     },
@@ -104,9 +104,7 @@ export default apiController(function projectRepoFsApi(api, options) {
       },
     },
     async function fsRemove({ body }, rep) {
-      const res = await transaction((repo, out) =>
-        repo.fs.remove(body.from, out),
-      );
+      const res = await transaction((repo, out) => repo.remove(body.from, out));
       rep.status(200).send(res);
     },
   );
@@ -125,8 +123,8 @@ export default apiController(function projectRepoFsApi(api, options) {
     },
     async function fsWrite({ body }, rep) {
       const res = await transaction(async (repo, out) => {
-        // await repo.fs.write(body.to, (data) => {});
-        let entry = repo.fs.findPathEntry(body.to);
+        // await repo.write(body.to, (data) => {});
+        let entry = repo.files.findPathEntry(body.to);
         if (!entry) {
           throw new Error(`Entry not found "${body.to}".`);
         }
@@ -134,7 +132,7 @@ export default apiController(function projectRepoFsApi(api, options) {
           if (!body.patches || !body.undo) {
             throw new Error(`Need data or patches to write to "${body.to}".`);
           }
-          entry = await repo.fs.patch(
+          entry = await repo.patch(
             entry,
             {
               ctime: body.ctime!,
@@ -147,7 +145,7 @@ export default apiController(function projectRepoFsApi(api, options) {
         } else if (typeof body.data === "undefined") {
           throw new Error(`Need data or patches to write to "${body.to}".`);
         } else {
-          entry = await repo.fs.write(entry, body.data, out);
+          entry = await repo.write(entry, body.data, out);
           return entry;
         }
       });
