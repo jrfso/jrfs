@@ -161,6 +161,8 @@ const requestHandlers: RequestHandlers = {
       if (patch) {
         return repo.patch(p.to, patch, out);
       } else if ("data" in p && typeof data !== "undefined") {
+        // TODO: We MUST check ctime here or have repo.write do it similar to
+        //       how repo.patch already does...
         return repo.write(p.to, data!, out);
       } else {
         throw new Error(`[WS] Need data or patch to write to "${p.to}".`);

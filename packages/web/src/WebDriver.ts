@@ -141,6 +141,7 @@ export class WebDriver extends Driver {
     out?: TransactionOutParams,
   ): Promise<Entry> {
     // TODO: The driver can check before sending if patch?.ctime is out of date.
+    // TODO: Even if no patch, we actually MUST pass ctime here too...
     return fsAction(this.fileTree, this.#client.write(params), out);
   }
   // #endregion
