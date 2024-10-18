@@ -130,10 +130,11 @@ export class Repository<FT extends FileTypes<FT>> {
     return (this as any)[Symbol.toStringTag];
   }
   // #endregion
-  // #region -- FS Commands
+  // #region -- FS Actions
 
-  // TODO: Do more validation before passing FS actions to driver.
-  #fs: FsCommands<FT> = Object.freeze({
+  // CONSIDER: Do more or less validation before passing FS actions to driver?
+
+  #fs: FsTransactions<FT> = Object.freeze({
     add: async (
       to: string,
       params: {
@@ -386,7 +387,7 @@ export class Repository<FT extends FileTypes<FT>> {
     },
   });
 
-  get fs(): FsCommands<FT> {
+  get fs(): FsTransactions<FT> {
     return this.#fs;
   }
   // #endregion
@@ -514,7 +515,7 @@ export type RepositoryPluginName = keyof RepositoryPlugins &
 
 // #endregion
 
-export interface FsCommands<FT extends FileTypes<FT>> {
+export interface FsTransactions<FT extends FileTypes<FT>> {
   add(
     to: string,
     params?: {
