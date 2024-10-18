@@ -95,7 +95,7 @@ export class Repository<FT extends FileTypes<FT>> {
   }
   // #region -- Core
   /** The driver interface of the configured implementation. */
-  protected get driver() {
+  get driver() {
     return this.#driver;
   }
 
@@ -130,270 +130,264 @@ export class Repository<FT extends FileTypes<FT>> {
     return (this as any)[Symbol.toStringTag];
   }
   // #endregion
-  // #region -- FS Actions
+  // #region -- FS Commands
 
   // TODO: Do more validation before passing FS actions to driver.
-
-  async add(
-    to: string,
-    params: {
-      /** File data. */
-      data?: unknown;
-      /** Parent entry. */
-      parent?: EntryOfId | null;
-    } = {},
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    const { data, parent } = params;
-    if (parent) {
-      const { files } = this;
-      const { entry } = files.entry(parent);
-      to = files.path(entry) + "/" + to;
-    }
-    return this.#driver.add(
-      "data" in params && typeof data !== "undefined"
-        ? {
-            to,
-            data,
-          }
-        : {
-            to,
-          },
-      out,
-    );
-  }
-
-  async copy(
-    entry: EntryOrPath,
-    dest: EntryOrPath | null,
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    const { files } = this;
-    const { path: from, entry: fromEntry } = files.entry(entry);
-    const { path: into, entry: intoEntry } = files.dest(dest);
-    let to: string;
-    if (into) {
-      if (intoEntry) {
-        // Found Node at destination.
-        if (!isDirectoryId(intoEntry.id)) {
-          throw new Error(`Destination already exists "${into}"`);
-        }
-        // Found DirectoryNode at destination. Move entry INTO it.
-        to = (into.endsWith("/") ? into : into + "/") + fromEntry.name;
-        // e.g. to = this.getNodePath(intoNode) + "/" + fromEntry.name;
-      } else {
-        to = into;
+  #fs: FsCommands<FT> = Object.freeze({
+    add: async (
+      to: string,
+      params: {
+        /** File data. */
+        data?: unknown;
+        /** Parent entry. */
+        parent?: EntryOfId | null;
+      } = {},
+      out?: TransactionOutParams,
+    ): Promise<Entry> => {
+      const { data, parent } = params;
+      if (parent) {
+        const { files } = this;
+        const { entry } = files.entry(parent);
+        to = files.path(entry) + "/" + to;
       }
-    } else {
-      // When dest is null, the `to` path is the root.
-      // NOTE: All paths are relative to Repository root, so no leading "/".
-      to = fromEntry.name;
-    }
-    return this.#driver.copy(
-      {
-        from,
-        fromEntry,
-        to,
-      },
-      out,
-    );
-  }
-
-  async get<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
-    target: EntryOrPath,
-  ): Promise<{
-    entry: Entry;
-    data: Readonly<D>;
-  }> {
-    const { files } = this;
-    const { path: from, entry, data } = files.fileEntry(target);
-    // In memory?
-    if (typeof data !== "undefined") {
-      return {
-        entry,
-        data: data as Readonly<D>,
-      };
-    }
-    // Get from driver.
-    const result = await this.#driver.get({ from, fromEntry: entry });
-    return result as { entry: Entry; data: Readonly<D> };
-  }
-
-  async move(
-    entry: EntryOrPath,
-    dest: EntryOrPath | null,
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    const { files } = this;
-    const { path: from, entry: fromEntry } = files.entry(entry);
-    const { path: into, entry: intoEntry } = files.dest(dest);
-    let to: string;
-    if (into) {
-      if (intoEntry) {
-        // Found Node at destination.
-        if (!isDirectoryId(intoEntry.id)) {
-          throw new Error(`Destination already exists "${into}"`);
-        }
-        // Found DirectoryNode at destination. Move entry INTO it.
-        to = (into.endsWith("/") ? into : into + "/") + fromEntry.name;
-        // e.g. to = this.getNodePath(intoNode) + "/" + fromEntry.name;
-      } else {
-        to = into;
-      }
-    } else {
-      // When dest is null, the `to` path is the root.
-      // NOTE: All paths are relative to Repository root, so no leading "/".
-      to = fromEntry.name;
-    }
-    return this.#driver.move(
-      {
-        from,
-        fromEntry,
-        to,
-      },
-      out,
-    );
-  }
-
-  patch(
-    entry: EntryOrPath,
-    params: {
-      /** ctime used to check if the original changed, before patching. */
-      ctime: number;
-      patches: MutativePatches;
-      undo?: MutativePatches;
+      return this.#driver.add(
+        "data" in params && typeof data !== "undefined"
+          ? {
+              to,
+              data,
+            }
+          : {
+              to,
+            },
+        out,
+      );
     },
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    const { files } = this;
-    const { path: to, entry: toEntry, data: origData } = files.fileEntry(entry);
-    if (typeof origData === "undefined") {
-      throw new Error(`Entry has no data "${to}".`);
-    }
-    const { ctime, patches, undo } = params;
-    if (ctime && ctime !== toEntry.ctime) {
-      // TODO: Don't just throw an error here. Instead, figure out if the
-      // patches are compatible and apply them OR throw a typed error so the
-      // caller can handle it.
-      throw new Error(`Entry cannot be patched "${to}".`);
-    }
-    // CONSIDER: origData could be null...
-    const data = applyPatch(origData!, patches);
-    return this.#driver.write(
-      {
-        to,
-        toEntry,
-        data,
-        patch: {
-          ctime,
-          patches,
-          undo,
-        },
-      },
-      out,
-    );
-  }
 
-  async remove(entry: EntryOrPath, out?: TransactionOutParams): Promise<Entry> {
-    const { files } = this;
-    const { path: from, entry: fromEntry } = files.entry(entry);
-    return this.#driver.remove(
-      {
-        from,
-        fromEntry,
-      },
-      out,
-    );
-  }
-
-  async rename(
-    entry: EntryOrPath,
-    name: string,
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    const { files } = this;
-    const { path: from, entry: fromEntry } = files.entry(entry);
-    let to: string;
-    const pId = fromEntry.pId;
-    if (!pId) {
-      to = name;
-    } else {
-      to = files.parentPath(fromEntry) + "/" + name;
-    }
-    return this.#driver.move(
-      {
-        from,
-        fromEntry,
-        to,
-      },
-      out,
-    );
-  }
-  /**
-   * Writes to an existing file with your `writer` function.
-   * @template T `FileType` name OR the `data` type to write.
-   */
-  async write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
-    entry: EntryOrPath,
-    writer: (data: D) => D | Promise<D> | void | Promise<void>,
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
-  /**
-   * Overwrites an existing file with the given `data`.
-   * @template T `FileType` name OR the `data` type to write.
-   */
-  async write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
-    entry: EntryOrPath,
-    data: Readonly<D>,
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
-  async write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
-    entry: EntryOrPath,
-    writerOrData:
-      | ((data: D) => D | Promise<D> | void | Promise<void>)
-      | Readonly<D>,
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    const { files } = this;
-    const { path: to, entry: toEntry, data } = files.fileEntry(entry);
-    let origData = data as D | undefined;
-    if (typeof origData === "undefined") {
-      origData = (await this.get(toEntry)).data as D;
-    }
-    if (typeof writerOrData === "function") {
-      // We don't need mutative's Draft<D> here to remove readonly from D's
-      // properties since D represents a mutable type already.
-      const writer = writerOrData as (
-        // data: Draft<T> is default, but for local cast skip the type import.
-        data: unknown,
-      ) => D | Promise<D> | void | Promise<void>;
-      const [data, patches, undo] = await createPatch(origData, writer);
-      if (patches.length < 1) {
-        // No change.
-        return toEntry;
+    copy: async (
+      entry: EntryOrPath,
+      dest: EntryOrPath | null,
+      out?: TransactionOutParams,
+    ): Promise<Entry> => {
+      const { files } = this;
+      const { path: from, entry: fromEntry } = files.entry(entry);
+      const { path: into, entry: intoEntry } = files.dest(dest);
+      let to: string;
+      if (into) {
+        if (intoEntry) {
+          // Found Node at destination.
+          if (!isDirectoryId(intoEntry.id)) {
+            throw new Error(`Destination already exists "${into}"`);
+          }
+          // Found DirectoryNode at destination. Move entry INTO it.
+          to = (into.endsWith("/") ? into : into + "/") + fromEntry.name;
+          // e.g. to = this.getNodePath(intoNode) + "/" + fromEntry.name;
+        } else {
+          to = into;
+        }
+      } else {
+        // When dest is null, the `to` path is the root.
+        // NOTE: All paths are relative to Repository root, so no leading "/".
+        to = fromEntry.name;
       }
+      return this.#driver.copy(
+        {
+          from,
+          fromEntry,
+          to,
+        },
+        out,
+      );
+    },
+
+    get: async <T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+      target: EntryOrPath,
+    ): Promise<{
+      entry: Entry;
+      data: Readonly<D>;
+    }> => {
+      const { files } = this;
+      const { path: from, entry, data } = files.fileEntry(target);
+      // In memory?
+      if (typeof data !== "undefined") {
+        return {
+          entry,
+          data: data as Readonly<D>,
+        };
+      }
+      // Get from driver.
+      const result = await this.#driver.get({ from, fromEntry: entry });
+      return result as { entry: Entry; data: Readonly<D> };
+    },
+
+    move: async (
+      entry: EntryOrPath,
+      dest: EntryOrPath | null,
+      out?: TransactionOutParams,
+    ): Promise<Entry> => {
+      const { files } = this;
+      const { path: from, entry: fromEntry } = files.entry(entry);
+      const { path: into, entry: intoEntry } = files.dest(dest);
+      let to: string;
+      if (into) {
+        if (intoEntry) {
+          // Found Node at destination.
+          if (!isDirectoryId(intoEntry.id)) {
+            throw new Error(`Destination already exists "${into}"`);
+          }
+          // Found DirectoryNode at destination. Move entry INTO it.
+          to = (into.endsWith("/") ? into : into + "/") + fromEntry.name;
+          // e.g. to = this.getNodePath(intoNode) + "/" + fromEntry.name;
+        } else {
+          to = into;
+        }
+      } else {
+        // When dest is null, the `to` path is the root.
+        // NOTE: All paths are relative to Repository root, so no leading "/".
+        to = fromEntry.name;
+      }
+      return this.#driver.move(
+        {
+          from,
+          fromEntry,
+          to,
+        },
+        out,
+      );
+    },
+
+    patch: (
+      entry: EntryOrPath,
+      params: {
+        /** ctime used to check if the original changed, before patching. */
+        ctime: number;
+        patches: MutativePatches;
+        undo?: MutativePatches;
+      },
+      out?: TransactionOutParams,
+    ): Promise<Entry> => {
+      const { files } = this;
+      const {
+        path: to,
+        entry: toEntry,
+        data: origData,
+      } = files.fileEntry(entry);
+      if (typeof origData === "undefined") {
+        throw new Error(`Entry has no data "${to}".`);
+      }
+      const { ctime, patches, undo } = params;
+      if (ctime && ctime !== toEntry.ctime) {
+        // TODO: Don't just throw an error here. Instead, figure out if the
+        // patches are compatible and apply them OR throw a typed error so the
+        // caller can handle it.
+        throw new Error(`Entry cannot be patched "${to}".`);
+      }
+      // CONSIDER: origData could be null...
+      const data = applyPatch(origData!, patches);
       return this.#driver.write(
         {
           to,
           toEntry,
           data,
           patch: {
-            ctime: toEntry.ctime,
+            ctime,
             patches,
             undo,
           },
         },
         out,
       );
-    }
-    return this.#driver.write(
-      {
-        to,
-        toEntry,
-        data: writerOrData,
-      },
-      out,
-    );
+    },
+
+    remove: async (
+      entry: EntryOrPath,
+      out?: TransactionOutParams,
+    ): Promise<Entry> => {
+      const { files } = this;
+      const { path: from, entry: fromEntry } = files.entry(entry);
+      return this.#driver.remove(
+        {
+          from,
+          fromEntry,
+        },
+        out,
+      );
+    },
+
+    rename: async (
+      entry: EntryOrPath,
+      name: string,
+      out?: TransactionOutParams,
+    ): Promise<Entry> => {
+      const { files } = this;
+      const { path: from, entry: fromEntry } = files.entry(entry);
+      let to: string;
+      const pId = fromEntry.pId;
+      if (!pId) {
+        to = name;
+      } else {
+        to = files.parentPath(fromEntry) + "/" + name;
+      }
+      return this.#driver.move(
+        {
+          from,
+          fromEntry,
+          to,
+        },
+        out,
+      );
+    },
+    write: async <T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+      entry: EntryOrPath,
+      writerOrData:
+        | ((data: D) => D | Promise<D> | void | Promise<void>)
+        | Readonly<D>,
+      out?: TransactionOutParams,
+    ): Promise<Entry> => {
+      const { files } = this;
+      const { path: to, entry: toEntry, data } = files.fileEntry(entry);
+      let origData = data as D | undefined;
+      if (typeof origData === "undefined") {
+        origData = (await this.fs.get(toEntry)).data as D;
+      }
+      if (typeof writerOrData === "function") {
+        // We don't need mutative's Draft<D> here to remove readonly from D's
+        // properties since D represents a mutable type already.
+        const writer = writerOrData as (
+          // data: Draft<T> is default, but for local cast skip the type import.
+          data: unknown,
+        ) => D | Promise<D> | void | Promise<void>;
+        const [data, patches, undo] = await createPatch(origData, writer);
+        if (patches.length < 1) {
+          // No change.
+          return toEntry;
+        }
+        return this.#driver.write(
+          {
+            to,
+            toEntry,
+            data,
+            patch: {
+              ctime: toEntry.ctime,
+              patches,
+              undo,
+            },
+          },
+          out,
+        );
+      }
+      return this.#driver.write(
+        {
+          to,
+          toEntry,
+          data: writerOrData,
+        },
+        out,
+      );
+    },
+  });
+
+  get fs(): FsCommands<FT> {
+    return this.#fs;
   }
   // #endregion
   // #region -- Queries
@@ -519,3 +513,66 @@ export type RepositoryPluginName = keyof RepositoryPlugins &
   NonNullable<string>;
 
 // #endregion
+
+export interface FsCommands<FT extends FileTypes<FT>> {
+  add(
+    to: string,
+    params?: {
+      /** File data. */
+      data?: unknown;
+      /** Parent entry. */
+      parent?: EntryOfId | null;
+    },
+    out?: TransactionOutParams,
+  ): Promise<Entry>;
+  copy(
+    entry: EntryOrPath,
+    dest: EntryOrPath | null,
+    out?: TransactionOutParams,
+  ): Promise<Entry>;
+  get<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+    target: EntryOrPath,
+  ): Promise<{
+    entry: Entry;
+    data: Readonly<D>;
+  }>;
+  move(
+    entry: EntryOrPath,
+    dest: EntryOrPath | null,
+    out?: TransactionOutParams,
+  ): Promise<Entry>;
+  patch(
+    entry: EntryOrPath,
+    params: {
+      /** ctime used to check if the original changed, before patching. */
+      ctime: number;
+      patches: MutativePatches;
+      undo?: MutativePatches;
+    },
+    out?: TransactionOutParams,
+  ): Promise<Entry>;
+  remove(entry: EntryOrPath, out?: TransactionOutParams): Promise<Entry>;
+  rename(
+    entry: EntryOrPath,
+    name: string,
+    out?: TransactionOutParams,
+  ): Promise<Entry>;
+  /**
+   * Writes to an existing file with your `writer` function.
+   * @template T `FileType` name OR the `data` type to write.
+   */
+  write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+    entry: EntryOrPath,
+    writer: (data: D) => D | Promise<D> | void | Promise<void>,
+    out?: TransactionOutParams,
+  ): Promise<Entry>;
+  /**
+   * Overwrites an existing file with the given `data`.
+   * @template T `FileType` name OR the `data` type to write.
+   */
+  write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+    entry: EntryOrPath,
+    data: Readonly<D>,
+    out?: TransactionOutParams,
+  ): Promise<Entry>;
+}

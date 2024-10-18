@@ -12,7 +12,7 @@ export async function openRepo() {
 
   setTimeout(async () => {
     console.log("TESTING WRITE FILE");
-    await repo.write<"db">("backend/db/main/_.db.json", (data) => {
+    await repo.fs.write<"db">("backend/db/main/_.db.json", (data) => {
       data.db.name = "maing";
       data.db.dialect = "sqlite";
       // delete data.db.mysql;
@@ -21,7 +21,7 @@ export async function openRepo() {
 
   setTimeout(async () => {
     console.log("TESTING READ FILE");
-    const { data } = await repo.get("backend/db/main/_.db.json");
+    const { data } = await repo.fs.get("backend/db/main/_.db.json");
     console.log("DATA", data);
   }, 6000);
 

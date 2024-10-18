@@ -131,11 +131,11 @@ type RequestHandlers = {
 const requestHandlers: RequestHandlers = {
   add(socket, repo, rx, p) {
     transaction("add", socket, rx, (out) =>
-      repo.add(p.to, "data" in p ? { data: p.data } : {}, out),
+      repo.fs.add(p.to, "data" in p ? { data: p.data } : {}, out),
     );
   },
   copy(socket, repo, rx, p) {
-    transaction("copy", socket, rx, (out) => repo.copy(p.from, p.to, out));
+    transaction("copy", socket, rx, (out) => repo.fs.copy(p.from, p.to, out));
   },
   get(socket, repo, rx, p) {
     const { from } = p;
@@ -150,20 +150,20 @@ const requestHandlers: RequestHandlers = {
     }
   },
   move(socket, repo, rx, p) {
-    transaction("move", socket, rx, (out) => repo.move(p.from, p.to, out));
+    transaction("move", socket, rx, (out) => repo.fs.move(p.from, p.to, out));
   },
   remove(socket, repo, rx, p) {
-    transaction("remove", socket, rx, (out) => repo.remove(p.from, out));
+    transaction("remove", socket, rx, (out) => repo.fs.remove(p.from, out));
   },
   async write(socket, repo, rx, p) {
     transaction("write", socket, rx, async (out) => {
       const { data, patch } = p;
       if (patch) {
-        return repo.patch(p.to, patch, out);
+        return repo.fs.patch(p.to, patch, out);
       } else if ("data" in p && typeof data !== "undefined") {
         // TODO: We MUST check ctime here or have repo.write do it similar to
         //       how repo.patch already does...
-        return repo.write(p.to, data!, out);
+        return repo.fs.write(p.to, data!, out);
       } else {
         throw new Error(`[WS] Need data or patch to write to "${p.to}".`);
       }
