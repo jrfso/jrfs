@@ -348,7 +348,7 @@ export class Repository<FT extends FileTypes<FT>> {
       const { path: to, entry: toEntry, data } = files.fileEntry(entry);
       let origData = data as D | undefined;
       if (typeof origData === "undefined") {
-        origData = (await this.fs.get(toEntry)).data as D;
+        origData = (await this.fs.get<T, D>(toEntry)).data;
       }
       if (typeof writerOrData === "function") {
         // We don't need mutative's Draft<D> here to remove readonly from D's
