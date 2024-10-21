@@ -51,7 +51,7 @@ export class Repository<FT> {
   #driver: Driver;
   #files: FileTree;
   #fileTypes: FileTypeProvider<FT>;
-  #plugin: RepositoryPluginsData;
+  #plugin: PluginsData;
 
   constructor(
     options: RepositoryOptions<FT> &
@@ -80,12 +80,10 @@ export class Repository<FT> {
     (this as any)[Symbol.toStringTag] = `Repository(${driver})`;
     // Initialize plugins.
     this.#plugin = {};
-    for (const name in repositoryPlugins) {
-      const params = pluginParams[name as RepositoryPluginName];
+    for (const name in registeredPlugins) {
+      const params = pluginParams[name as PluginName];
       if (params === false) continue;
-      const plugin = repositoryPlugins[
-        name as RepositoryPluginName
-      ] as RepositoryPlugin;
+      const plugin = registeredPlugins[name as PluginName] as Plugin;
       if (plugin) plugin.call(this, params);
     }
   }
@@ -449,7 +447,7 @@ export interface RepositoryOptions<FT> {
   /** Provide a unique short id generator to create node ids. */
   createShortId?: CreateShortIdFunction;
 
-  plugins?: Partial<Record<RepositoryPluginName, RepositoryPluginOf["params"]>>;
+  plugins?: Partial<Record<PluginName, PluginOf["params"]>>;
 }
 // #endregion
 // #region -- Drivers
@@ -479,10 +477,8 @@ export function registerDriver<K extends string = keyof DriverTypes>(
 // #endregion
 // #region -- Plugins
 
-const repositoryPlugins = {} as {
-  [P in RepositoryPluginName]?: RepositoryPlugin<
-    RepositoryPlugins[P]["params"]
-  >;
+const registeredPlugins = {} as {
+  [P in PluginName]?: Plugin<Plugins[P]["params"]>;
 };
 
 /**
@@ -491,37 +487,37 @@ const repositoryPlugins = {} as {
  * @param name Name of the plugin to register.
  * @param plugin Plugin initialization function.
  */
-export function registerPlugin<N extends RepositoryPluginName>(
+export function registerPlugin<N extends PluginName>(
   name: N,
-  plugin: RepositoryPlugin<RepositoryPlugins[N]["params"]>,
+  plugin: Plugin<Plugins[N]["params"]>,
 ) {
-  repositoryPlugins[name] = plugin as never;
+  registeredPlugins[name] = plugin as never;
 }
 
 /** {@link Repository} plugin implementation function. */
-export interface RepositoryPlugin<P = unknown> {
+export interface Plugin<P = unknown> {
   (this: Repository<any>, params: P | undefined): void;
 }
-/** `{params?,data?}` Declares integral types of a {@link RepositoryPlugin}. */
-export interface RepositoryPluginOf<P = undefined, D = unknown> {
+/** `{params?,data?}` Declares integral types of a {@link Plugin}. */
+export interface PluginOf<P = undefined, D = unknown> {
   /** Params passed when calling plugin. A `false` value disables the plugin. */
   params?: P | boolean;
   /** Type of the internal data stored in {@link Repository} by the plugin. */
   data?: D;
 }
-/** `{"plug":{params?,data}}` Declare global {@link RepositoryPlugin}s. */
-export interface RepositoryPlugins {
-  // e.g. myPlugin: RepositoryPluginOf<{foo?:"bar"|"baz"}>;
-  // "test": RepositoryPluginOf<true, boolean>;
+/** `{"plug":{params?,data}}` Declare global {@link Plugin}s. */
+export interface Plugins {
+  // e.g. myPlugin: PluginOf<{foo?:"bar"|"baz"}>;
+  // "test": PluginOf<true, boolean>;
 }
 /** `{ [plugin]: plugin["data"] }` */
-export type RepositoryPluginsData = {
+export type PluginsData = {
   /** Internal plugin data. One prop per registered plugin. */
-  [Prop in RepositoryPluginName]?: RepositoryPlugins[Prop]["data"];
+  [Prop in PluginName]?: Plugins[Prop]["data"];
 };
 
-/** Plugin name of a plugin registered in {@link RepositoryPlugins} */
-export type RepositoryPluginName = keyof RepositoryPlugins & string;
+/** Plugin name of a plugin registered in {@link Plugins} */
+export type PluginName = keyof Plugins & string;
 
 // #endregion
 
