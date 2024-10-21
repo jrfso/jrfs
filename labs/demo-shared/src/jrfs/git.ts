@@ -15,7 +15,7 @@ export interface GitCommands {
   };
 }
 
-export interface GitCommanders {
+export interface GitCommander {
   add(files?: string[]): Promise<any>;
   commit(message: string): Promise<any>;
   push(force?: boolean): Promise<any>;
@@ -31,7 +31,7 @@ declare module "@jrfs/core" {
   }
 
   interface Repository<FT> {
-    get git(): GitCommanders;
+    get git(): GitCommander;
   }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 }
@@ -50,7 +50,7 @@ registerPlugin("git", function registerGitPlugin() {
       console.log("[GIT] Push...");
       return this.exec("git.push", { force });
     },
-  } satisfies GitCommanders);
+  } satisfies GitCommander);
   Object.defineProperty(this, "git", {
     enumerable: true,
     value: commands,
