@@ -1,5 +1,5 @@
 import { Maybe, Static, StringEnum, Type, define } from "@jrfs/typebox";
-import type { FileOf, FileTypeInfo } from "@jrfs/core";
+import type { FileType, FileTypeInfo } from "@jrfs/core";
 import { ProjectFileTypes } from "@/platform/project";
 import { DirDesignMeta } from "@/platform/project/dir";
 import { DbModelMysql } from "./mysql";
@@ -52,7 +52,7 @@ export const DbDesignFile: FileTypeInfo<DbDesignFileMeta> = {
   },
 };
 /** DbDesign file-type data and file-type wide metadata type declaration. */
-export type DbDesignFile = FileOf<DbDesign, DbDesignFileMeta>;
+export type DbDesignFile = FileType<DbDesign, DbDesignFileMeta>;
 
 declare module "@/platform/project" {
   interface ProjectFileTypes {

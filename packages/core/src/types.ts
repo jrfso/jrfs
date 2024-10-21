@@ -195,7 +195,7 @@ export type FileMetaType<
  * @template D `data` Describes the JSON root found in a file of this type.
  * @template M `meta` Describes file-type wide metadata.
  */
-export interface FileOf<D = unknown, M = unknown> {
+export interface FileType<D = unknown, M = unknown> {
   /** The JSON root found in a file of this type. */
   data: D;
   /** File-type wide metadata. */

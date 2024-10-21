@@ -47,7 +47,7 @@ import {
  * Provides access to a JSON repo/file system from client or server.
  *
  * @template FT File Types interface mapping file type names to TS types.
- * Each key of `FT` should be declared as a `FileOf<Instance, Meta?>` and the
+ * Each key of `FT` should be declared as a `FileType<Instance, Meta?>` and the
  * corresponding `FileTypeInfo` should be set in the {@link FileTypeProvider}
  * supplied to the `Repository`constructor.
  */
