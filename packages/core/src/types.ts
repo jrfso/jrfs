@@ -1,3 +1,5 @@
+import type { Repository } from "./Repository";
+
 /** @import { FileTree } from "@/FileTree" */
 
 // #region -- FileTree
@@ -233,6 +235,32 @@ export interface FileTypeInfo<M = unknown> {
   /** The JSON schema used to validate this file type. */
   schema?: any;
 }
+// #endregion
+// #region -- Plugins
+
+/** {@link Repository} plugin implementation function. */
+export interface Plugin<P = unknown> {
+  (this: Repository<any>, params: P | undefined): void;
+}
+/** Plugin name of a plugin registered in {@link Plugins} */
+export type PluginName = keyof Plugins & string;
+/** `{params?,data?}` Declares integral types of a {@link Plugin}. */
+export interface PluginOf<P = undefined, D = unknown> {
+  /** Params passed when calling plugin. A `false` value disables the plugin. */
+  params?: P | boolean;
+  /** Type of the internal data stored in {@link Repository} by the plugin. */
+  data?: D;
+}
+/** `{"plug":{params?,data}}` Declare global {@link Plugin}s. */
+export interface Plugins {
+  // e.g. myPlugin: PluginOf<{foo?:"bar"|"baz"}>;
+  // "test": PluginOf<true, boolean>;
+}
+/** `{ [plugin]: plugin["data"] }` */
+export type PluginsData = {
+  /** Internal plugin data. One prop per registered plugin. */
+  [Prop in PluginName]?: Plugins[Prop]["data"];
+};
 // #endregion
 // #region -- Commands
 
