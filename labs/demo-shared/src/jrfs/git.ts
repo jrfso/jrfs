@@ -1,4 +1,9 @@
-import { CommandType, PluginType, registerPlugin } from "@jrfs/core";
+import {
+  // CommandsRunner,
+  CommandType,
+  PluginType,
+  registerPlugin,
+} from "@jrfs/core";
 
 export interface GitCommander {
   add(files?: string[]): Promise<any>;
@@ -27,7 +32,8 @@ declare module "@jrfs/core" {
   /* eslint-enable @typescript-eslint/no-unused-vars */
 }
 
-registerPlugin("git", function registerGitPlugin() {
+export default registerPlugin("git", function registerGitPlugin(cmds) {
+  console.log("[GIT] Registering shared commands...");
   const commands = Object.freeze({
     add: async (files?) => {
       console.log("[GIT] Add...");

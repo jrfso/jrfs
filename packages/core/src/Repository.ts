@@ -494,8 +494,9 @@ const registeredPlugins = {} as {
 export function registerPlugin<N extends PluginName>(
   name: N,
   plugin: Plugin<Plugins[N]["params"]>,
-) {
+): Plugin<Plugins[N]["params"]> {
   registeredPlugins[name] = plugin as never;
+  return plugin;
 }
 // #endregion
 

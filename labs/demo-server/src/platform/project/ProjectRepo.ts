@@ -2,7 +2,7 @@ import { Repository } from "@jrfs/node";
 import { TypeboxFileTypes } from "@jrfs/typebox";
 import { ProjectFileTypes } from "demo-shared/platform/project";
 import { createShortId } from "demo-shared/jrfs/nanoid";
-import "demo-shared/jrfs/git";
+import "@/lib/jrfs/simple-git";
 
 export class ProjectRepo extends Repository<ProjectFileTypes> {
   // readonly server: Server<ProjectFileTypes>;

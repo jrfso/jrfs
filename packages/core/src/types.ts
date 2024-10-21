@@ -1,4 +1,5 @@
-import type { Repository } from "./Repository";
+import type { Repository } from "@/Repository";
+import type { WritableFileTree } from "@/WritableFileTree";
 
 /** @import { FileTree } from "@/FileTree" */
 
@@ -304,6 +305,11 @@ export interface Commands extends FsCommands {
   //   result: { message: string };
   // };
 }
+
+export type CommandsRunner<Cmds> = {
+  [CN in keyof Cmds & CommandName]: RunCommand<CN>;
+};
+
 /** Global `keyof` {@link Commands} `& string` type. */
 export type CommandName = keyof Commands & string;
 
@@ -346,34 +352,18 @@ export type CommandType<
       result: Result;
     };
 
-// export type PrepareCommand<Params = unknown> = (
-//   props: PrepareCommandProps,
-//   params: Params,
-// ) => Params | Promise<Params>;
+export type RunCommand<CN extends CommandName> = (
+  props: RunCommandProps,
+  params: Commands[CN]["params"],
+) => Promise<Commands[CN]["result"]>;
 
-// export interface PrepareCommandProps {
-//   // CONSIDER: Add config, driver, plugin...
-//   /** Entries read and cached during prepare. */
-//   entries: Partial<Record<"to" | "from", Entry>> &
-//     Partial<Record<string, Entry>>;
-//   files: FileTree;
-//   fileTypes: FileTypeProvider<any>;
-// }
-
-// export type RunCommand<CN extends CommandNames> = {
-//   (
-//     props: RunCommandProps,
-//     params: Commands[CN]["params"],
-//   ) => Promise<Commands[CN]["result"]>;
-// };
-
-// export interface RunCommandProps {
-//   // CONSIDER: Add config, driver, plugin...
-//   /** Entries read and cached during prepare. */
-//   entries: PrepareCommandProps["entries"];
-//   files: WritableFileTree;
-//   fileTypes: FileTypeProvider<any>;
-// }
+export interface RunCommandProps {
+  // CONSIDER: Add config, driver, plugin...transaction?
+  /** Entries read and cached during run. */
+  entries: Partial<Record<"to" | "from", Entry>> & Record<string, Entry>;
+  files: WritableFileTree;
+  fileTypes: FileTypeProvider<any>;
+}
 // #endregion
 // #region -- Commands: FS
 
