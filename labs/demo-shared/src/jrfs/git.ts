@@ -1,4 +1,4 @@
-import { CommandType, PluginOf, registerPlugin } from "@jrfs/core";
+import { CommandType, PluginType, registerPlugin } from "@jrfs/core";
 
 export interface GitCommander {
   add(files?: string[]): Promise<any>;
@@ -18,7 +18,7 @@ declare module "@jrfs/core" {
   interface Commands extends GitCommands {}
 
   interface Plugins {
-    git: PluginOf<undefined>;
+    git: PluginType<undefined>;
   }
 
   interface Repository<FT> {

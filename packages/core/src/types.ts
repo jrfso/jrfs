@@ -173,22 +173,22 @@ export function isFileId(id: string): boolean {
 export type FileDataType<
   FT,
   T extends keyof FT | Omit<string, keyof FT>,
-  Otherwise = any,
+  Else = any,
 > = T extends keyof FT
   ? "data" extends keyof FT[T]
     ? FT[T]["data"]
-    : Otherwise
-  : Otherwise;
+    : Else
+  : Else;
 
 export type FileMetaType<
   FT,
   T extends keyof FT | Omit<string, keyof FT>,
-  Otherwise = any,
+  Else = any,
 > = T extends keyof FT
   ? "meta" extends keyof FT[T]
     ? FT[T]["meta"]
-    : Otherwise
-  : Otherwise;
+    : Else
+  : Else;
 
 /**
  * Declares the `data` and `meta`data types of a given file-type.
@@ -244,57 +244,60 @@ export interface Plugin<P = unknown> {
 }
 /** Plugin name of a plugin registered in {@link Plugins} */
 export type PluginName = keyof Plugins & string;
-/** `{params?,data?}` Declares integral types of a {@link Plugin}. */
-export interface PluginOf<P = undefined, D = unknown> {
+/** Declares global {@link Plugin}s. `{"myPlugin":{params?,data}}` */
+export interface Plugins {
+  // e.g. myPlugin: PluginType<{foo?:"bar"|"baz"}>;
+  // "test": PluginType<true, boolean>;
+}
+/** Data types in {@link Plugins}. `{[P in Plugins]: Plugins[P]["data"]}` */
+export type PluginsData = {
+  /** Internal plugin data. One prop per registered plugin. */
+  [Prop in PluginName]?: Plugins[Prop]["data"];
+};
+/** Declares types that define {@link Plugins}. `{params?,data?}` */
+export interface PluginType<P = undefined, D = unknown> {
   /** Params passed when calling plugin. A `false` value disables the plugin. */
   params?: P | boolean;
   /** Type of the internal data stored in {@link Repository} by the plugin. */
   data?: D;
 }
-/** `{"plug":{params?,data}}` Declare global {@link Plugin}s. */
-export interface Plugins {
-  // e.g. myPlugin: PluginOf<{foo?:"bar"|"baz"}>;
-  // "test": PluginOf<true, boolean>;
-}
-/** `{ [plugin]: plugin["data"] }` */
-export type PluginsData = {
-  /** Internal plugin data. One prop per registered plugin. */
-  [Prop in PluginName]?: Plugins[Prop]["data"];
-};
 // #endregion
 // #region -- Commands
 
-/** `{"my.cmd":{params[?],result}}` Global command types. */
+/** Global command type declarations. `{"my.cmd":{params[?],result}}` */
 export interface Commands extends FsCommands {
   // "test.echo": {
   //   params: { message: string };
   //   result: { message: string };
   // };
 }
-
+/** Global `keyof` {@link Commands} `& string` type. */
 export type CommandName = keyof Commands & string;
 
+/** Gets type of command `params` from command name `CN` or `Else`. */
 export type CommandParams<
   CN extends CommandName | Omit<string, keyof Commands>,
-  Otherwise = any,
+  Else = any,
 > = CN extends CommandName
   ? "params" extends keyof Commands[CN]
     ? Commands[CN]["params"]
-    : Otherwise
-  : Otherwise;
+    : Else
+  : Else;
 
+/** Gets type of command `result` from command name `CN` or `Else`. */
 export type CommandResult<
   CN extends CommandName | Omit<string, keyof Commands>,
-  Otherwise = any,
+  Else = any,
 > = CN extends CommandName
   ? "result" extends keyof Commands[CN]
     ? {
         tx?: number;
         of: Commands[CN]["result"];
       }
-    : { tx?: number; of: Otherwise }
-  : { tx?: number; of: Otherwise };
-/** Declares integral types for custom {@link Commands}. */
+    : { tx?: number; of: Else }
+  : { tx?: number; of: Else };
+
+/** Declares the types that define custom {@link Commands}. */
 export type CommandType<
   Params = unknown,
   Result = unknown,
