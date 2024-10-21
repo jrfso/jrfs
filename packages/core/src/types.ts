@@ -264,7 +264,7 @@ export type PluginsData = {
 // #endregion
 // #region -- Commands
 
-/** Global commands interface to declare or extend plugin commands onto. */
+/** `{"my.cmd":{params[?],result}}` Global command types. */
 export interface Commands extends FsCommands {
   // "test.echo": {
   //   params: { message: string };
@@ -273,17 +273,6 @@ export interface Commands extends FsCommands {
 }
 
 export type CommandName = keyof Commands & string;
-
-// export type CommandOf<Params = unknown, Result = unknown> = {
-//   // mode?: "read" | "write";
-//   params: Params;
-//   result: Result;
-// };
-
-// export interface CommandResult<T = unknown> {
-//   tx?: number;
-//   of: T;
-// }
 
 export type CommandParams<
   CN extends CommandName | Omit<string, keyof Commands>,
@@ -305,6 +294,21 @@ export type CommandResult<
       }
     : { tx?: number; of: Otherwise }
   : { tx?: number; of: Otherwise };
+/** Declares integral types for custom {@link Commands}. */
+export type CommandType<
+  Params = unknown,
+  Result = unknown,
+> = undefined extends Params
+  ? {
+      // mode?: "read" | "write";
+      params?: Params;
+      result: Result;
+    }
+  : {
+      // mode?: "read" | "write";
+      params: Params;
+      result: Result;
+    };
 
 // export type PrepareCommand<Params = unknown> = (
 //   props: PrepareCommandProps,
@@ -338,42 +342,26 @@ export type CommandResult<
 // #region -- Commands: FS
 
 export interface FsCommands {
-  "fs.add": {
-    params: { to: string; data?: unknown };
-    result: FsEntryIdResult;
-  };
-  "fs.copy": {
-    params: { from: string; to: string };
-    result: FsEntryIdResult;
-  };
-  "fs.get": {
-    params: { from: string };
-    result: FsDataResult;
-  };
-  "fs.move": {
-    params: { from: string; to: string };
-    result: FsEntryIdResult;
-  };
-  "fs.remove": {
-    params: { from: string };
-    result: FsEntryIdResult;
-  };
-  "fs.write": {
-    params:
-      | {
-          to: string;
-          data: unknown;
-          ctime?: number;
-          patch?: never;
-        }
-      | {
-          to: string;
-          data?: never;
-          ctime: number;
-          patch: MutativePatches;
-        };
-    result: FsEntryIdResult;
-  };
+  "fs.add": CommandType<{ to: string; data?: unknown }, FsEntryIdResult>;
+  "fs.copy": CommandType<{ from: string; to: string }, FsEntryIdResult>;
+  "fs.get": CommandType<{ from: string }, FsDataResult>;
+  "fs.move": CommandType<{ from: string; to: string }, FsEntryIdResult>;
+  "fs.remove": CommandType<{ from: string }, FsEntryIdResult>;
+  "fs.write": CommandType<
+    | {
+        to: string;
+        data: unknown;
+        ctime?: number;
+        patch?: never;
+      }
+    | {
+        to: string;
+        data?: never;
+        ctime: number;
+        patch: MutativePatches;
+      },
+    FsEntryIdResult
+  >;
 }
 /** `{ id, data }` */
 export interface FsDataResult extends FsEntryIdResult {

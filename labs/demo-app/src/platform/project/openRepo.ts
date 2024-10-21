@@ -12,6 +12,8 @@ export async function openRepo() {
 
   setTimeout(() => {
     repo.git.commit("hello");
+    repo.exec("git.add", {});
+    repo.exec("hello");
     // repo.exec("git.commit", { message: "yada" });
     // repo.exec("test.echo", { message: "" });
     // repo.exec("fs.add", { to: "", data: null });

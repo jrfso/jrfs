@@ -1,4 +1,4 @@
-import { PluginOf, registerPlugin } from "@jrfs/core";
+import { CommandType, PluginOf, registerPlugin } from "@jrfs/core";
 
 export interface GitCommander {
   add(files?: string[]): Promise<any>;
@@ -7,18 +7,9 @@ export interface GitCommander {
 }
 
 export interface GitCommands {
-  "git.add": {
-    params: { files?: string[] };
-    result: { files: string[] };
-  };
-  "git.commit": {
-    params: { message: string };
-    result: { commit: string };
-  };
-  "git.push": {
-    params: { force?: boolean };
-    result: { commit: string };
-  };
+  "git.add": CommandType<{ files?: string[] }, { files: string[] }>;
+  "git.commit": CommandType<{ message: string }, { commit: string }>;
+  "git.push": CommandType<{ force?: boolean }, { commit: string }>;
 }
 
 declare module "@jrfs/core" {
