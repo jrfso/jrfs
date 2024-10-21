@@ -1,5 +1,4 @@
 import {
-  type FileTypes,
   type TransactionParams,
   type WritableFileTree,
   // logFileTreeChange,
@@ -22,7 +21,7 @@ type PromiseCallbacks = [(result?: any) => void, (reason?: any) => void];
 /** `[resolved, rejected]` */
 type PromiseResults = [any, any];
 
-export interface WebClient<FT extends FileTypes<FT> = any> {
+export interface WebClient {
   open(fileTree: WritableFileTree): Promise<void>;
   close(): Promise<void>;
 
@@ -67,11 +66,11 @@ function connect(ws: WebSocket) {
   });
 }
 
-export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
+export function createWebClient(opt: {
   logging?: boolean;
   /** WebSocket URL e.g. `ws://localhost:40141/sockets/v1/t/repo/fs` */
   ws: string;
-}): WebClient<FT> {
+}): WebClient {
   let closeCalled = false;
   let ws: WebSocket | undefined;
   let tree = null! as WritableFileTree;
@@ -187,7 +186,7 @@ export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
     });
   }
 
-  const client: WebClient<FT> = {
+  const client: WebClient = {
     async open(fileTree) {
       if (tree) return;
       tree = fileTree;

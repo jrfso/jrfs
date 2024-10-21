@@ -2,7 +2,6 @@ import {
   type DriverProps,
   type Entry,
   type FileTree,
-  type FileTypes,
   type TransactionOutParams,
   type TransactionParams,
   Driver,
@@ -155,7 +154,7 @@ export interface WebDriverConfig {
 // Set object name for the default `toString` implementation.
 (WebDriver as any)[Symbol.toStringTag] = "WebDriver";
 
-function createWebDriver<FT extends FileTypes<FT>>(
+function createWebDriver(
   props: DriverProps,
   config: WebDriverConfig,
 ): WebDriver {

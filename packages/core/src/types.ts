@@ -168,6 +168,26 @@ export function isFileId(id: string): boolean {
 // #endregion
 // #region -- File Types
 
+export type FileDataType<
+  FT,
+  T extends keyof FT | Omit<string, keyof FT>,
+  Otherwise = any,
+> = T extends keyof FT
+  ? "data" extends keyof FT[T]
+    ? FT[T]["data"]
+    : Otherwise
+  : Otherwise;
+
+export type FileMetaType<
+  FT,
+  T extends keyof FT | Omit<string, keyof FT>,
+  Otherwise = any,
+> = T extends keyof FT
+  ? "meta" extends keyof FT[T]
+    ? FT[T]["meta"]
+    : Otherwise
+  : Otherwise;
+
 /**
  * Declares the `data` and `meta`data types of a given file-type.
  * @template D `data` Describes the JSON root found in a file of this type.
@@ -180,18 +200,13 @@ export interface FileOf<D = unknown, M = unknown> {
   meta: M;
 }
 /**
- * Declares a {@link FileType} `name` mapping to a {@link FileOf} type.
- * @template FT File Types interface, to map file type names to TS types.
- * (See example usage in `Repository` class.)
- */
-export type FileTypes<FT> = Record<keyof FT & string, FileOf>;
-/**
  * Type information for any file type.
  * @template FT File Types interface, to map file type names to TS types.
- * @template M Type of file `meta` data.
+ * @template T Key of `FT`, a file type name.
  */
-export interface FileType<FT, M = unknown> extends FileTypeInfo<M> {
-  name: keyof FT & string;
+export interface FileType<FT, T extends keyof FT = keyof FT>
+  extends FileTypeInfo<FileMetaType<FT, T>> {
+  name: T & string;
 }
 /**
  * Type information for a file type, except for it's `name`.

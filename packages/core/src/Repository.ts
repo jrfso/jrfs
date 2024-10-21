@@ -6,7 +6,7 @@ import {
   type Entry,
   type EntryOfId,
   type EntryOrPath,
-  type FileTypes,
+  type FileDataType,
   type MutativePatches,
   type NodeInfo,
   isDirectoryId,
@@ -47,7 +47,7 @@ import {
  * corresponding `FileTypeInfo` should be set in the {@link FileTypeProvider}
  * supplied to the `Repository`constructor.
  */
-export class Repository<FT extends FileTypes<FT>> {
+export class Repository<FT> {
   #driver: Driver;
   #files: FileTree;
   #fileTypes: FileTypeProvider<FT>;
@@ -196,7 +196,7 @@ export class Repository<FT extends FileTypes<FT>> {
       );
     },
 
-    get: async <T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+    get: async <T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
       target: EntryOrPath,
     ): Promise<{
       entry: Entry;
@@ -333,7 +333,10 @@ export class Repository<FT extends FileTypes<FT>> {
         out,
       );
     },
-    write: async <T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+    write: async <
+      T = unknown,
+      D = T extends keyof FT ? FileDataType<FT, T> : T,
+    >(
       entry: EntryOrPath,
       writerOrData:
         | ((data: D) => D | Promise<D> | void | Promise<void>)
@@ -394,12 +397,12 @@ export class Repository<FT extends FileTypes<FT>> {
   ): Promise<
     Array<{
       node: NodeInfo;
-      data: Readonly<FT[K]["data"]> | undefined;
+      data: Readonly<FileDataType<FT, K>> | undefined;
     }>
   > {
     const results: Array<{
       node: NodeInfo;
-      data: Readonly<FT[K]["data"]> | undefined;
+      data: Readonly<FileDataType<FT, K>> | undefined;
     }> = [];
     const fileType = this.#fileTypes.get(type);
     if (!fileType) {
@@ -409,7 +412,7 @@ export class Repository<FT extends FileTypes<FT>> {
     const fileTypeEnding = fileType.end;
     files.forEach(null, (node /* , i, siblings */) => {
       if (!node.isDir && node.name.endsWith(fileTypeEnding)) {
-        const data = files.data(node.id);
+        const data = files.data<FileDataType<FT, K>>(node.id);
         results.push({
           node,
           data,
@@ -439,7 +442,7 @@ export class Repository<FT extends FileTypes<FT>> {
 // #region -- Options
 
 /** Options to create a {@link Repository}. */
-export interface RepositoryOptions<FT extends FileTypes<FT>> {
+export interface RepositoryOptions<FT> {
   /** Name of the driver type to use. */
   driver: keyof DriverTypes;
   fileTypes: FileTypeProvider<FT>;
@@ -454,9 +457,7 @@ export interface RepositoryOptions<FT extends FileTypes<FT>> {
 /** Map of registered driver factory functions. */
 const driverFactories: Record<string, DriverFactory> = {};
 
-export function getDriverFactory<FT extends FileTypes<FT>>(
-  driverType: keyof DriverTypes & string,
-) {
+export function getDriverFactory(driverType: keyof DriverTypes & string) {
   const driverFactory = driverFactories[driverType];
   if (!driverFactory) {
     throw new Error(`Driver factory not found - "${driverType}"`);
@@ -524,7 +525,7 @@ export type RepositoryPluginName = keyof RepositoryPlugins & string;
 
 // #endregion
 
-export interface FsTransactions<FT extends FileTypes<FT>> {
+export interface FsTransactions<FT> {
   add(
     to: string,
     params?: {
@@ -540,7 +541,7 @@ export interface FsTransactions<FT extends FileTypes<FT>> {
     dest: EntryOrPath | null,
     out?: TransactionOutParams,
   ): Promise<Entry>;
-  get<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+  get<T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
     target: EntryOrPath,
   ): Promise<{
     entry: Entry;
@@ -571,7 +572,7 @@ export interface FsTransactions<FT extends FileTypes<FT>> {
    * Writes to an existing file with your `writer` function.
    * @template T `FileType` name OR the `data` type to write.
    */
-  write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+  write<T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
     entry: EntryOrPath,
     writer: (data: D) => D | Promise<D> | void | Promise<void>,
     out?: TransactionOutParams,
@@ -580,7 +581,7 @@ export interface FsTransactions<FT extends FileTypes<FT>> {
    * Overwrites an existing file with the given `data`.
    * @template T `FileType` name OR the `data` type to write.
    */
-  write<T = unknown, D = T extends keyof FT ? FT[T]["data"] : T>(
+  write<T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
     entry: EntryOrPath,
     data: Readonly<D>,
     out?: TransactionOutParams,

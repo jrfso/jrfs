@@ -8,7 +8,6 @@ import {
   Driver,
   DriverProps,
   Entry,
-  FileTypes,
   NodeEntry,
   TransactionOutParams,
   TransactionParams,
@@ -384,7 +383,7 @@ export class FsDriver extends Driver {
 // Set object name for the default `toString` implementation.
 (FsDriver as any)[Symbol.toStringTag] = "FsDriver";
 
-function createFsDriver<FT extends FileTypes<FT>>(
+function createFsDriver(
   props: DriverProps,
   optionsOrConfigPath: string | FsDriverOptions,
 ): FsDriver {

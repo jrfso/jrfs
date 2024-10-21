@@ -1,16 +1,19 @@
 import type { TSchema } from "@sinclair/typebox";
 import { TypeCheck, TypeCompiler } from "@sinclair/typebox/compiler";
 // Local
-import type { FileType, FileTypeInfo, FileTypes } from "@jrfs/core";
+import type {
+  FileDataType,
+  FileMetaType,
+  FileType,
+  FileTypeInfo,
+} from "@jrfs/core";
 import { FileTypeProvider } from "@jrfs/core";
 
-export class TypeboxFileTypes<
-  FT extends FileTypes<FT>,
-> extends FileTypeProvider<FT> {
+export class TypeboxFileTypes<FT> extends FileTypeProvider<FT> {
   /** Map of file type key to compiled TypeBox schema validator. */
   #compiled = new Map<keyof FT & string, TypeCheck<TSchema>>();
   /** Map of file type key to file type details. */
-  #types = new Map<keyof FT & string, FileType<FT>>();
+  #types = new Map<keyof FT & string, unknown>();
 
   /**
    * Returns the first {@link FileType<FT>} where {@link FileTypeInfo.end}
@@ -22,7 +25,7 @@ export class TypeboxFileTypes<
     const keys = types.keys();
     // CONSIDER: Cache results with an LRU cache keyed by nameOrPath.
     for (const key of keys) {
-      const fileType = types.get(key)!;
+      const fileType = types.get(key) as FileType<FT>;
       if (nameOrPath.endsWith(fileType.end)) {
         return fileType;
       }
@@ -32,15 +35,13 @@ export class TypeboxFileTypes<
     return undefined;
   }
   /** Gets file type info by name. */
-  get<K extends keyof FT & string>(
-    typeName: K,
-  ): FileType<FT, FT[K]["meta"]> | undefined {
+  get<K extends keyof FT & string>(typeName: K): FileType<FT, K> | undefined {
     const types = this.#types;
-    return types.get(typeName) as FileType<FT, FT[K]["meta"]> | undefined;
+    return types.get(typeName) as FileType<FT, K> | undefined;
   }
   /** Sets file type info by name. */
   set(typesByName: {
-    [P in keyof FT]?: FileTypeInfo<FT[P]["meta"]>;
+    [P in keyof FT]?: FileTypeInfo<FileMetaType<FT, P>>;
   }): this {
     const types = this.#types;
     for (const name in typesByName) {
@@ -57,7 +58,7 @@ export class TypeboxFileTypes<
   /** Sets a single file type info by name. */
   setOne<K extends keyof FT & string>(
     typeName: K,
-    info: FileTypeInfo<FT[K]["meta"]>,
+    info: FileTypeInfo<FileMetaType<FT, K>>,
   ): this {
     const types = this.#types;
     types.set(typeName, {
@@ -74,13 +75,13 @@ export class TypeboxFileTypes<
   validate<TN extends keyof FT & string>(
     typeName: TN,
     value: unknown,
-  ): value is FT[TN]["data"] {
+  ): value is FileDataType<FT, TN> {
     const types = this.#types;
     const compiled = this.#compiled;
     let compiler = compiled.get(typeName);
     if (!compiler) {
       // Compile and store
-      const entry = types.get(typeName);
+      const entry = types.get(typeName) as FileType<FT>;
       if (!entry) {
         return false;
       }
