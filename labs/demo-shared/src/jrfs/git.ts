@@ -32,7 +32,7 @@ declare module "@jrfs/core" {
   /* eslint-enable @typescript-eslint/no-unused-vars */
 }
 
-export default registerPlugin("git", function registerGitPlugin(cmds) {
+export default registerPlugin("git", function registerGitPlugin(params) {
   console.log("[GIT] Registering shared commands...");
   const commands = Object.freeze({
     add: async (files?) => {
