@@ -10,10 +10,12 @@ export async function openRepo() {
 
   await repo.open();
 
-  repo.git.commit("hello");
-  repo.exec("git.commit", { message: "yada" });
-  repo.exec("test.echo", { message: "" });
-  repo.exec("fs.add", { to: "", data: null });
+  setTimeout(() => {
+    repo.git.commit("hello");
+    // repo.exec("git.commit", { message: "yada" });
+    // repo.exec("test.echo", { message: "" });
+    // repo.exec("fs.add", { to: "", data: null });
+  }, 1000);
 
   setTimeout(async () => {
     console.log("TESTING WRITE FILE");

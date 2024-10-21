@@ -246,26 +246,37 @@ export interface Commands extends FsCommands {
 
 export type CommandName = keyof Commands & string;
 
-export type CommandOf<Params = unknown, Result = unknown> = {
-  // mode?: "read" | "write";
-  params: Params;
-  result: Result;
-};
+// export type CommandOf<Params = unknown, Result = unknown> = {
+//   // mode?: "read" | "write";
+//   params: Params;
+//   result: Result;
+// };
 
-export interface CommandResult<T = unknown> {
-  tx?: number;
-  of: T;
-}
+// export interface CommandResult<T = unknown> {
+//   tx?: number;
+//   of: T;
+// }
 
-export type CommandType<
+export type CommandParams<
   CN extends CommandName | Omit<string, keyof Commands>,
-  T,
   Otherwise = any,
 > = CN extends CommandName
-  ? T extends keyof Commands[CN]
-    ? Commands[CN][T]
+  ? "params" extends keyof Commands[CN]
+    ? Commands[CN]["params"]
     : Otherwise
   : Otherwise;
+
+export type CommandResult<
+  CN extends CommandName | Omit<string, keyof Commands>,
+  Otherwise = any,
+> = CN extends CommandName
+  ? "result" extends keyof Commands[CN]
+    ? {
+        tx?: number;
+        of: Commands[CN]["result"];
+      }
+    : { tx?: number; of: Otherwise }
+  : { tx?: number; of: Otherwise };
 
 // export type PrepareCommand<Params = unknown> = (
 //   props: PrepareCommandProps,

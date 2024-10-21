@@ -1,8 +1,8 @@
 // Local
 import {
-  type CommandResult,
-  type CommandType,
   type CommandName,
+  type CommandParams,
+  type CommandResult,
   type Entry,
   type EntryOfId,
   type EntryOrPath,
@@ -425,10 +425,10 @@ export class Repository<FT> {
   // #region -- Commands
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
-    ...params: undefined extends CommandType<CN, "params">
-      ? [params?: CommandType<CN, "params">]
-      : [params: CommandType<CN, "params">]
-  ): Promise<CommandResult<CommandType<CN, "result">>> {
+    ...params: undefined extends CommandParams<CN>
+      ? [params?: CommandParams<CN>]
+      : [params: CommandParams<CN>]
+  ): Promise<CommandResult<CN>> {
     return this.#driver.exec(commandName, params);
   }
   // #endregion

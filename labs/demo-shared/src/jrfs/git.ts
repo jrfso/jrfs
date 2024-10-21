@@ -1,8 +1,4 @@
-import {
-  Repository,
-  RepositoryPluginOf,
-  registerPlugin,
-} from "@jrfs/core";
+import { RepositoryPluginOf, registerPlugin } from "@jrfs/core";
 
 export interface GitCommands {
   "git.add": {
@@ -19,56 +15,45 @@ export interface GitCommands {
   };
 }
 
-export interface GitCommandHelpers {
+export interface GitCommanders {
   add(files?: string[]): Promise<any>;
   commit(message: string): Promise<any>;
   push(force?: boolean): Promise<any>;
 }
 
 declare module "@jrfs/core" {
-  interface Commands extends GitCommands {
-    "git.add": {
-      params: { files?: string[] };
-      result: { files: string[] };
-    };
-    "git.commit": {
-      params: { message: string };
-      result: { commit: string };
-    };
-    "git.push": {
-      params: { force?: boolean };
-      result: { commit: string };
-    };
-  }
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+
+  interface Commands extends GitCommands {}
 
   interface RepositoryPlugins {
-    git: RepositoryPluginOf<undefined, GitCommandHelpers>;
+    git: RepositoryPluginOf;
   }
 
   interface Repository<FT> {
-    get git(): GitCommandHelpers;
+    get git(): GitCommanders;
   }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 }
 
-registerPlugin("git", function registerGitCommands() {
-  this.plugin.git = (function (repo): GitCommandHelpers {
-    return {
-      async add(files?: string[]) {
-        return repo.exec("git.add", { files });
-      },
-      async commit(message: string) {
-        return repo.exec("git.commit", { message });
-      },
-      async push(force?: boolean) {
-        return repo.exec("git.push", { force });
-      },
-    };
-  })(this);
-});
-
-Object.defineProperty(Repository.prototype, "git", {
-  enumerable: true,
-  get: function getGitCommands(this: Repository<any>): GitCommandHelpers {
-    return this.plugin.git!;
-  },
+registerPlugin("git", function registerGitPlugin() {
+  const commands = Object.freeze({
+    add: async (files?) => {
+      console.log("[GIT] Add...");
+      return this.exec("git.add", { files });
+    },
+    commit: async (message) => {
+      console.log("[GIT] Commit...");
+      return this.exec("git.commit", { message });
+    },
+    push: async (force?) => {
+      console.log("[GIT] Push...");
+      return this.exec("git.push", { force });
+    },
+  } satisfies GitCommanders);
+  Object.defineProperty(this, "git", {
+    enumerable: true,
+    value: commands,
+    writable: false,
+  });
 });

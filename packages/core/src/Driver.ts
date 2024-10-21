@@ -108,23 +108,23 @@ export abstract class Driver {
   // #endregion
 
   async exec(commandName: string, params: unknown): Promise<any> {
-    //
+    // //
 
-    // CommandOf[C]["result"]> {
-    // TODO: Validate command.
-    const validate = null! as any; // CommandOf[C]["validate"];
-    const files = this.files;
-    let result = validate.call(
-      null,
-      {
-        files,
-        fileTypes: this.fileTypes,
-      },
-      params,
-    );
-    if (result instanceof Promise) {
-      result = await result;
-    }
+    // // CommandOf[C]["result"]> {
+    // // TODO: Validate command.
+    // const validate = null! as any; // CommandOf[C]["validate"];
+    // const files = this.files;
+    // let result = validate.call(
+    //   null,
+    //   {
+    //     files,
+    //     fileTypes: this.fileTypes,
+    //   },
+    //   params,
+    // );
+    // if (result instanceof Promise) {
+    //   result = await result;
+    // }
     // TODO: Run command via driver.
     console.log(`TODO: Run ${commandName}`, params);
     return null! as any; // Promise<CommandOf[C]["result"]>;
