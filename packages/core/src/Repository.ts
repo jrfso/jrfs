@@ -84,11 +84,13 @@ export class Repository<FT> {
     (this as any)[Symbol.toStringTag] = `Repository(${driver})`;
     // Initialize plugins.
     this.#plugin = {};
-    for (const name in registeredPlugins) {
-      const params = pluginParams[name as PluginName];
-      if (params === false) continue;
-      const plugin = registeredPlugins[name as PluginName] as Plugin;
-      if (plugin) plugin.call(this, params);
+    if (pluginParams) {
+      for (const name in pluginParams) {
+        const params = pluginParams[name as PluginName];
+        if (params === false) continue;
+        const plugin = registeredPlugins[name as PluginName] as Plugin;
+        if (plugin) plugin.call(this, params);
+      }
     }
   }
   // #region -- Core

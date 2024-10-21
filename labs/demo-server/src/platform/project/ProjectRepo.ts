@@ -14,7 +14,7 @@ export class ProjectRepo extends Repository<ProjectFileTypes> {
       fs: configFilePath,
       fileTypes: new TypeboxFileTypes<ProjectFileTypes>().set(ProjectFileTypes),
       plugins: {
-        // git: true,
+        git: true,
       },
     });
     (this as any)[Symbol.toStringTag] = `ProjectRepo("${configFilePath}")`;
