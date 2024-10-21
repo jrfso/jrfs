@@ -170,6 +170,7 @@ export function isFileId(id: string): boolean {
 // #endregion
 // #region -- File Types
 
+/** Gets type of `data` for file type if `T` is a `keyof FT` or `Else`. */
 export type FileDataType<
   FT,
   T extends keyof FT | Omit<string, keyof FT>,
@@ -180,6 +181,7 @@ export type FileDataType<
     : Else
   : Else;
 
+/** Gets type of `meta` for file type if `T` is a `keyof FT` or `Else`. */
 export type FileMetaType<
   FT,
   T extends keyof FT | Omit<string, keyof FT>,
@@ -274,7 +276,7 @@ export interface Commands extends FsCommands {
 /** Global `keyof` {@link Commands} `& string` type. */
 export type CommandName = keyof Commands & string;
 
-/** Gets type of command `params` from command name `CN` or `Else`. */
+/** Gets type of command `params` if `CN` is a command name or `Else`. */
 export type CommandParams<
   CN extends CommandName | Omit<string, keyof Commands>,
   Else = any,
@@ -284,7 +286,7 @@ export type CommandParams<
     : Else
   : Else;
 
-/** Gets type of command `result` from command name `CN` or `Else`. */
+/** Gets type of command `result` if `CN` is a command name or `Else`. */
 export type CommandResult<
   CN extends CommandName | Omit<string, keyof Commands>,
   Else = any,
