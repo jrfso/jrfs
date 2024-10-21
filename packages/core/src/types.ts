@@ -219,3 +219,116 @@ export interface FileTypeInfo<M = unknown> {
   schema?: any;
 }
 // #endregion
+// #region -- Commands
+
+/** Global commands interface to declare or extend plugin commands onto. */
+export interface Commands extends FsCommands {
+  // "test.echo": {
+  //   params: { message: string };
+  //   result: { message: string };
+  // };
+}
+
+export type CommandName = keyof Commands & string;
+
+export type CommandOf<Params = unknown, Result = unknown> = {
+  // mode?: "read" | "write";
+  params: Params;
+  result: Result;
+};
+
+export interface CommandResult<T = unknown> {
+  tx?: number;
+  of: T;
+}
+
+export type CommandType<
+  CN extends CommandName | Omit<string, keyof Commands>,
+  T,
+  Otherwise = any,
+> = CN extends CommandName
+  ? T extends keyof Commands[CN]
+    ? Commands[CN][T]
+    : Otherwise
+  : Otherwise;
+
+// export type PrepareCommand<Params = unknown> = (
+//   props: PrepareCommandProps,
+//   params: Params,
+// ) => Params | Promise<Params>;
+
+// export interface PrepareCommandProps {
+//   // CONSIDER: Add config, driver, plugin...
+//   /** Entries read and cached during prepare. */
+//   entries: Partial<Record<"to" | "from", Entry>> &
+//     Partial<Record<string, Entry>>;
+//   files: FileTree;
+//   fileTypes: FileTypeProvider<any>;
+// }
+
+// export type RunCommand<CN extends CommandNames> = {
+//   (
+//     props: RunCommandProps,
+//     params: Commands[CN]["params"],
+//   ) => Promise<Commands[CN]["result"]>;
+// };
+
+// export interface RunCommandProps {
+//   // CONSIDER: Add config, driver, plugin...
+//   /** Entries read and cached during prepare. */
+//   entries: PrepareCommandProps["entries"];
+//   files: WritableFileTree;
+//   fileTypes: FileTypeProvider<any>;
+// }
+// #endregion
+// #region -- Commands: FS
+
+export interface FsCommands {
+  "fs.add": {
+    params: { to: string; data?: unknown };
+    result: FsEntryIdResult;
+  };
+  "fs.copy": {
+    params: { from: string; to: string };
+    result: FsEntryIdResult;
+  };
+  "fs.get": {
+    params: { from: string };
+    result: FsDataResult;
+  };
+  "fs.move": {
+    params: { from: string; to: string };
+    result: FsEntryIdResult;
+  };
+  "fs.remove": {
+    params: { from: string };
+    result: FsEntryIdResult;
+  };
+  "fs.write": {
+    params:
+      | {
+          to: string;
+          data: unknown;
+          ctime?: number;
+          patch?: never;
+        }
+      | {
+          to: string;
+          data?: never;
+          ctime: number;
+          patch: MutativePatches;
+        };
+    result: FsEntryIdResult;
+  };
+}
+/** `{ id, data }` */
+export interface FsDataResult extends FsEntryIdResult {
+  /** Complete data. */
+  data?: unknown;
+}
+/** `{ id }` */
+export interface FsEntryIdResult {
+  /** Id of the entry affected by the command. */
+  id: string;
+}
+// #endregion

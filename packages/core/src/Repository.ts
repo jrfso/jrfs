@@ -1,5 +1,8 @@
 // Local
 import {
+  type CommandResult,
+  type CommandType,
+  type CommandName,
   type Entry,
   type EntryOfId,
   type EntryOrPath,
@@ -43,19 +46,12 @@ import {
  * Each key of `FT` should be declared as a `FileOf<Instance, Meta?>` and the
  * corresponding `FileTypeInfo` should be set in the {@link FileTypeProvider}
  * supplied to the `Repository`constructor.
- *
- * @template DK Driver key used in constructor option.
- *
- * @template DT Driver type from `DriverTypes[DK]` else `Driver`.
  */
 export class Repository<FT extends FileTypes<FT>> {
   #driver: Driver;
   #files: FileTree;
   #fileTypes: FileTypeProvider<FT>;
-  #plugin: Partial<{
-    /** Internal plugin data. One prop per registered plugin. */
-    [Prop in RepositoryPluginName]: RepositoryPlugins[Prop]["data"];
-  }>;
+  #plugin: RepositoryPluginsData;
 
   constructor(
     options: RepositoryOptions<FT> &
@@ -65,7 +61,7 @@ export class Repository<FT extends FileTypes<FT>> {
       driver: driverType,
       fileTypes,
       createShortId = defaultCreateShortId,
-      plugins,
+      plugins: pluginParams = {},
     } = options;
     const driverFactory = getDriverFactory(driverType);
     const driverOptions = options[driverType];
@@ -84,13 +80,13 @@ export class Repository<FT extends FileTypes<FT>> {
     (this as any)[Symbol.toStringTag] = `Repository(${driver})`;
     // Initialize plugins.
     this.#plugin = {};
-    if (plugins) {
-      for (const name in plugins) {
-        const params = (plugins as Record<string, unknown>)[name];
-        if (params === false) continue;
-        const plugin = getPlugin(name);
-        plugin.call(this, params);
-      }
+    for (const name in repositoryPlugins) {
+      const params = pluginParams[name as RepositoryPluginName];
+      if (params === false) continue;
+      const plugin = repositoryPlugins[
+        name as RepositoryPluginName
+      ] as RepositoryPlugin;
+      if (plugin) plugin.call(this, params);
     }
   }
   // #region -- Core
@@ -423,6 +419,16 @@ export class Repository<FT extends FileTypes<FT>> {
     return results;
   }
   // #endregion
+  // #region -- Commands
+  async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+    commandName: CN,
+    ...params: undefined extends CommandType<CN, "params">
+      ? [params?: CommandType<CN, "params">]
+      : [params: CommandType<CN, "params">]
+  ): Promise<CommandResult<CommandType<CN, "result">>> {
+    return this.#driver.exec(commandName, params);
+  }
+  // #endregion
 }
 // #region -- Diagnostics
 
@@ -440,7 +446,7 @@ export interface RepositoryOptions<FT extends FileTypes<FT>> {
   /** Provide a unique short id generator to create node ids. */
   createShortId?: CreateShortIdFunction;
 
-  plugins?: Record<RepositoryPluginName, RepositoryPluginOf["params"]>;
+  plugins?: Partial<Record<RepositoryPluginName, RepositoryPluginOf["params"]>>;
 }
 // #endregion
 // #region -- Drivers
@@ -472,15 +478,12 @@ export function registerDriver<K extends string = keyof DriverTypes>(
 // #endregion
 // #region -- Plugins
 
-const repositoryPlugins: Record<string, RepositoryPlugin<any>> = {};
+const repositoryPlugins = {} as {
+  [P in RepositoryPluginName]?: RepositoryPlugin<
+    RepositoryPlugins[P]["params"]
+  >;
+};
 
-function getPlugin(name: string) {
-  const plugin = repositoryPlugins[name];
-  if (!plugin) {
-    throw new Error(`Plugin not found "${name}".`);
-  }
-  return plugin;
-}
 /**
  * Registers a plugin to initialize in the {@link Repository} constructor
  * when enabled in the given {@link RepositoryOptions}.
@@ -491,7 +494,7 @@ export function registerPlugin<N extends RepositoryPluginName>(
   name: N,
   plugin: RepositoryPlugin<RepositoryPlugins[N]["params"]>,
 ) {
-  repositoryPlugins[name] = plugin;
+  repositoryPlugins[name] = plugin as never;
 }
 
 /** {@link Repository} plugin implementation function. */
@@ -508,10 +511,16 @@ export interface RepositoryPluginOf<P = undefined, D = unknown> {
 /** Interface to declare global {@link RepositoryPlugin} info onto. */
 export interface RepositoryPlugins {
   // e.g. myPlugin: RepositoryPluginOf<{foo?:"bar"|"baz"}>;
+  // "test": RepositoryPluginOf<true, boolean>;
 }
+
+export type RepositoryPluginsData = {
+  /** Internal plugin data. One prop per registered plugin. */
+  [Prop in RepositoryPluginName]?: RepositoryPlugins[Prop]["data"];
+};
+
 /** Plugin name of a plugin registered in {@link RepositoryPlugins} */
-export type RepositoryPluginName = keyof RepositoryPlugins &
-  NonNullable<string>;
+export type RepositoryPluginName = keyof RepositoryPlugins & string;
 
 // #endregion
 
