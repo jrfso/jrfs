@@ -40,7 +40,7 @@ export default apiController(function projectRepoFsApi(api, options) {
     },
     async function fsAdd({ body }, rep) {
       const res = await transaction((repo, out) =>
-        repo.add(body.to, "data" in body ? { data: body.data } : {}, out),
+        repo.fs.add(body.to, "data" in body ? { data: body.data } : {}, out),
       );
       rep.status(200).send(res);
     },
@@ -85,7 +85,7 @@ export default apiController(function projectRepoFsApi(api, options) {
     },
     async function fsMove({ body }, rep) {
       const res = await transaction((repo, out) =>
-        repo.move(body.from, body.to, out),
+        repo.fs.move(body.from, body.to, out),
       );
       rep.status(200).send(res);
     },
@@ -104,7 +104,9 @@ export default apiController(function projectRepoFsApi(api, options) {
       },
     },
     async function fsRemove({ body }, rep) {
-      const res = await transaction((repo, out) => repo.remove(body.from, out));
+      const res = await transaction((repo, out) =>
+        repo.fs.remove(body.from, out),
+      );
       rep.status(200).send(res);
     },
   );
@@ -132,7 +134,7 @@ export default apiController(function projectRepoFsApi(api, options) {
           if (!body.patches || !body.undo) {
             throw new Error(`Need data or patches to write to "${body.to}".`);
           }
-          entry = await repo.patch(
+          entry = await repo.fs.patch(
             entry,
             {
               ctime: body.ctime!,
@@ -145,7 +147,7 @@ export default apiController(function projectRepoFsApi(api, options) {
         } else if (typeof body.data === "undefined") {
           throw new Error(`Need data or patches to write to "${body.to}".`);
         } else {
-          entry = await repo.write(entry, body.data, out);
+          entry = await repo.fs.write(entry, body.data, out);
           return entry;
         }
       });

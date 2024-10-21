@@ -33,13 +33,13 @@
     "nanoid": "^5.0.7"
   },
   "devDependencies": {
-    "@sinclair/typebox": "^0.33.7",
     "@jrfs/core": "*",
-    "@jrfs/typebox": "*"
+    "@jrfs/typebox": "*",
+    "@sinclair/typebox": "^0.33.7"
   },
   "peerDependencies": {
-    "@sinclair/typebox": "^0.33.7",
     "@jrfs/core": "*",
-    "@jrfs/typebox": "*"
+    "@jrfs/typebox": "*",
+    "@sinclair/typebox": "^0.33.7"
   }
 }
