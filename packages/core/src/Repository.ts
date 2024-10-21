@@ -7,6 +7,7 @@ import {
   type EntryOfId,
   type EntryOrPath,
   type FileDataType,
+  type FileTypeProvider,
   type MutativePatches,
   type NodeInfo,
   type Plugin,
@@ -23,7 +24,6 @@ import type {
   TransactionOutParams,
 } from "@/Driver";
 import { FileTree } from "@/FileTree";
-import { FileTypeProvider } from "@/FileTypeProvider";
 import {
   type CreateShortIdFunction,
   applyPatch,

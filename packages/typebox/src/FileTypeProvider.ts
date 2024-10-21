@@ -9,7 +9,7 @@ import type {
 } from "@jrfs/core";
 import { FileTypeProvider } from "@jrfs/core";
 
-export class TypeboxFileTypes<FT> extends FileTypeProvider<FT> {
+export class TypeboxFileTypes<FT> implements FileTypeProvider<FT> {
   /** Map of file type key to compiled TypeBox schema validator. */
   #compiled = new Map<keyof FT & string, TypeCheck<TSchema>>();
   /** Map of file type key to file type details. */
