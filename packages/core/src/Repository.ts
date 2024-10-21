@@ -502,19 +502,19 @@ export function registerPlugin<N extends RepositoryPluginName>(
 export interface RepositoryPlugin<P = unknown> {
   (this: Repository<any>, params: P | undefined): void;
 }
-/** Declares the integral types of a {@link RepositoryPlugin}. */
+/** `{params?,data?}` Declares integral types of a {@link RepositoryPlugin}. */
 export interface RepositoryPluginOf<P = undefined, D = unknown> {
   /** Params passed when calling plugin. A `false` value disables the plugin. */
   params?: P | boolean;
   /** Type of the internal data stored in {@link Repository} by the plugin. */
   data?: D;
 }
-/** Interface to declare global {@link RepositoryPlugin} info onto. */
+/** `{"plug":{params?,data}}` Declare global {@link RepositoryPlugin}s. */
 export interface RepositoryPlugins {
   // e.g. myPlugin: RepositoryPluginOf<{foo?:"bar"|"baz"}>;
   // "test": RepositoryPluginOf<true, boolean>;
 }
-
+/** `{ [plugin]: plugin["data"] }` */
 export type RepositoryPluginsData = {
   /** Internal plugin data. One prop per registered plugin. */
   [Prop in RepositoryPluginName]?: RepositoryPlugins[Prop]["data"];

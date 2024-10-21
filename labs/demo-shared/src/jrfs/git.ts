@@ -1,5 +1,11 @@
 import { RepositoryPluginOf, registerPlugin } from "@jrfs/core";
 
+export interface GitCommander {
+  add(files?: string[]): Promise<any>;
+  commit(message: string): Promise<any>;
+  push(force?: boolean): Promise<any>;
+}
+
 export interface GitCommands {
   "git.add": {
     params: { files?: string[] };
@@ -15,19 +21,13 @@ export interface GitCommands {
   };
 }
 
-export interface GitCommander {
-  add(files?: string[]): Promise<any>;
-  commit(message: string): Promise<any>;
-  push(force?: boolean): Promise<any>;
-}
-
 declare module "@jrfs/core" {
   /* eslint-disable @typescript-eslint/no-unused-vars */
 
   interface Commands extends GitCommands {}
 
   interface RepositoryPlugins {
-    git: RepositoryPluginOf;
+    git: RepositoryPluginOf<undefined>;
   }
 
   interface Repository<FT> {
