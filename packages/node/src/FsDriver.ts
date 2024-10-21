@@ -33,7 +33,7 @@ export interface FsDriverOptions extends Partial<FsConfig> {
 }
 
 // CONSIDER: Save tx in order to sync between restarts! Apply it inside onOpen
-// in the fileTree.build() block by setting files.tx = txFromFile;
+// in the files.build() block by setting files.tx = txFromFile;
 
 export class FsDriver extends Driver {
   /** The repo configuration. */
@@ -95,7 +95,7 @@ export class FsDriver extends Driver {
    * from the {@link Config.ids} file, if any.
    */
   override async onOpen() {
-    await this.fileTree.build(async (files) => {
+    await this.files.build(async (files) => {
       const rootChildDepth = this.#rootChildDepth;
       const rootPath = this.#rootPath;
       const fileTypes = this.fileTypes;
@@ -184,7 +184,7 @@ export class FsDriver extends Driver {
           dirsByPath.set(pathFromRoot, node);
         }
       }
-      files.rid = indexFileData?.rid ?? this.fileTree.createShortId(16);
+      files.rid = indexFileData?.rid ?? this.files.createShortId(16);
     });
   }
 
@@ -199,18 +199,18 @@ export class FsDriver extends Driver {
   }
 
   async #writeIndexIfSet() {
-    const { fileTree } = this;
+    const { files } = this;
     const indexFile = this.#indexFile;
     if (!indexFile) {
       return;
     }
     const nodeIds: FsIndexData["node"] = {};
     const indexFileData: FsIndexData = {
-      rid: fileTree.rid,
+      rid: files.rid,
       node: nodeIds,
     };
-    for (const node of fileTree) {
-      const path = fileTree.path(node)!;
+    for (const node of files) {
+      const path = files.path(node)!;
       nodeIds[path] = node.id;
     }
     const json = JSON.stringify(indexFileData, undefined, 2);
@@ -284,7 +284,7 @@ export class FsDriver extends Driver {
         await FSP.writeFile(toPath, json);
       }
       const stats = await FSP.stat(toPath);
-      const target = this.fileTree.add(
+      const target = this.files.add(
         to,
         isDir ? { stats } : { data, stats },
         out,
@@ -306,7 +306,7 @@ export class FsDriver extends Driver {
         recursive: true,
       });
       const stats = await FSP.stat(toPath);
-      const target = this.fileTree.copy(fromEntry, to, { stats }, out);
+      const target = this.files.copy(fromEntry, to, { stats }, out);
       return target;
     });
   }
@@ -326,7 +326,7 @@ export class FsDriver extends Driver {
       console.log("READING", fromPath);
       const jsonText = (await FSP.readFile(fromPath)).toString();
       const jsonData = JSON.parse(jsonText);
-      this.fileTree.setData(fromEntry, jsonData);
+      this.files.setData(fromEntry, jsonData);
       return {
         entry: fromEntry,
         data: jsonData,
@@ -346,7 +346,7 @@ export class FsDriver extends Driver {
       await FSP.mkdir(toPathParent, { recursive: true });
       await FSP.rename(fromPath, toPath);
       const stats = await FSP.stat(toPath);
-      const target = this.fileTree.move(fromEntry, to, { stats }, out);
+      const target = this.files.move(fromEntry, to, { stats }, out);
       return target;
     });
   }
@@ -359,7 +359,7 @@ export class FsDriver extends Driver {
       const fullPath = this.#fullPath(from);
       console.log("[FS] rm", from);
       await FSP.rm(fullPath, { recursive: true });
-      const target = this.fileTree.remove(fromEntry, out);
+      const target = this.files.remove(fromEntry, out);
       return target;
     });
   }
@@ -374,7 +374,7 @@ export class FsDriver extends Driver {
       console.log("[FS] write", to);
       await FSP.writeFile(fullPath, json);
       const stats = await FSP.stat(fullPath);
-      const target = this.fileTree.write(toEntry, { data, stats, patch }, out);
+      const target = this.files.write(toEntry, { data, stats, patch }, out);
       return target;
     });
   }

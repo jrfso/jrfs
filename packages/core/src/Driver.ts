@@ -12,7 +12,7 @@ import { WritableFileTree } from "@/WritableFileTree";
 /** Base JRFS driver class. */
 export abstract class Driver {
   #createShortId: CreateShortIdFunction;
-  #fileTree = null! as WritableFileTree;
+  #files = null! as WritableFileTree;
   #fileTypes: FileTypeProvider<any>;
   /** `true` if {@link open}, `false` if {@link close}d */
   #opened = false;
@@ -24,8 +24,8 @@ export abstract class Driver {
 
   // #region -- Props
 
-  protected get fileTree() {
-    return this.#fileTree;
+  protected get files() {
+    return this.#files;
   }
 
   protected get fileTypes() {
@@ -53,28 +53,25 @@ export abstract class Driver {
     // Save state.
     await this.onClose();
     // Clear nodes.
-    this.#fileTree.reset();
+    this.#files.reset();
   }
   /** Handles closing the repo. */
   protected abstract onClose(): Promise<void>;
   /** Handles opening the repo. */
   protected abstract onOpen(): Promise<void>;
 
-  async open(fileTree: FileTree) {
+  async open(files: FileTree) {
     const opened = this.#opened;
     if (opened) {
       throw new Error(`Driver has already opened ${this}`);
     }
-    this.#fileTree = WritableFileTree[INTERNAL].create(
-      fileTree,
-      this.#createShortId,
-    );
+    this.#files = WritableFileTree[INTERNAL].create(files, this.#createShortId);
     await this.onOpen();
     // Save state.
     this.#opened = true;
   }
   // #endregion
-  // #region -- Actions
+  // #region -- Transactions
 
   /** Add a directory or a file with data. */
   abstract add(
@@ -109,6 +106,29 @@ export abstract class Driver {
   ): Promise<Entry>;
 
   // #endregion
+
+  async exec(commandName: string, params: unknown): Promise<any> {
+    //
+
+    // CommandOf[C]["result"]> {
+    // TODO: Validate command.
+    const validate = null! as any; // CommandOf[C]["validate"];
+    const files = this.files;
+    let result = validate.call(
+      null,
+      {
+        files,
+        fileTypes: this.fileTypes,
+      },
+      params,
+    );
+    if (result instanceof Promise) {
+      result = await result;
+    }
+    // TODO: Run command via driver.
+    console.log(`TODO: Run ${commandName}`, params);
+    return null! as any; // Promise<CommandOf[C]["result"]>;
+  }
 }
 
 export interface TransactionOutParams {

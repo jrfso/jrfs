@@ -54,11 +54,11 @@ export class WebDriver extends Driver {
     console.log("WebDriver onOpen");
     // Get project file listing from server...
     const client = this.#client;
-    await client.open(this.fileTree);
+    await client.open(this.files);
     // Cache file data?
     const cache = this.#cache;
     if (cache) {
-      await cache.open(this.fileTree);
+      await cache.open(this.files);
     }
   }
   // #endregion
@@ -75,14 +75,14 @@ export class WebDriver extends Driver {
     params: TransactionParams["add"],
     out?: TransactionOutParams,
   ): Promise<Entry> {
-    return fsAction(this.fileTree, this.#client.add(params), out);
+    return fsAction(this.files, this.#client.add(params), out);
   }
   /** Get file data.  */
   async get(params: TransactionParams["get"]): Promise<{
     entry: Entry;
     data: unknown;
   }> {
-    const { fileTree } = this;
+    const { files } = this;
     // Cached?
     const cache = this.#cache;
     if (cache) {
@@ -94,12 +94,12 @@ export class WebDriver extends Driver {
     }
     // Get from server.
     const result = await this.#client.get(params);
-    const entry = fileTree.getEntry(result.id);
+    const entry = files.getEntry(result.id);
     if (!entry) {
       throw new Error(`Entry not found "${result.id}".`);
     }
     // Update our in-memory data.
-    fileTree.setData(entry, result.data);
+    files.setData(entry, result.data);
     return {
       entry,
       data: result.data,
@@ -110,27 +110,27 @@ export class WebDriver extends Driver {
     params: TransactionParams["copy"],
     out?: TransactionOutParams,
   ): Promise<Entry> {
-    return fsAction(this.fileTree, this.#client.copy(params), out);
+    return fsAction(this.files, this.#client.copy(params), out);
   }
   /** Move or rename a file/directory.  */
   async move(
     params: TransactionParams["move"],
     out?: TransactionOutParams,
   ): Promise<Entry> {
-    return fsAction(this.fileTree, this.#client.move(params), out);
+    return fsAction(this.files, this.#client.move(params), out);
   }
   /** Remove a file/directory. */
   async remove(
     params: TransactionParams["remove"],
     out?: TransactionOutParams,
   ): Promise<Entry> {
-    const { fileTree } = this;
-    const entry = fileTree.findPathEntry(params.from)!;
+    const { files } = this;
+    const entry = files.findPathEntry(params.from)!;
     const { id, tx } = await this.#client.remove(params);
     if (out) {
       out.tx = tx;
     }
-    if (fileTree.getEntry(id)) {
+    if (files.getEntry(id)) {
       throw new Error(`Entry not removed "${id}".`);
     }
     return entry;
@@ -142,7 +142,7 @@ export class WebDriver extends Driver {
   ): Promise<Entry> {
     // TODO: The driver can check before sending if patch?.ctime is out of date.
     // TODO: Even if no patch, we actually MUST pass ctime here too...
-    return fsAction(this.fileTree, this.#client.write(params), out);
+    return fsAction(this.files, this.#client.write(params), out);
   }
   // #endregion
 }
