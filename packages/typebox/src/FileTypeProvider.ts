@@ -4,7 +4,7 @@ import { TypeCheck, TypeCompiler } from "@sinclair/typebox/compiler";
 import type {
   FileDataType,
   FileMetaType,
-  FileType,
+  FileTypeEntry,
   FileTypeInfo,
 } from "@jrfs/core";
 import { FileTypeProvider } from "@jrfs/core";
@@ -16,16 +16,16 @@ export class TypeboxFileTypes<FT> extends FileTypeProvider<FT> {
   #types = new Map<keyof FT & string, unknown>();
 
   /**
-   * Returns the first {@link FileType<FT>} where {@link FileTypeInfo.end}
+   * Returns the first {@link FileTypeEntry<FT>} where {@link FileTypeInfo.end}
    * matches the end of the given `nameOrPath`.
    * @param nameOrPath File name or path.
    */
-  fromPath(nameOrPath: string): FileType<FT> | undefined {
+  fromPath(nameOrPath: string): FileTypeEntry<FT> | undefined {
     const types = this.#types;
     const keys = types.keys();
     // CONSIDER: Cache results with an LRU cache keyed by nameOrPath.
     for (const key of keys) {
-      const fileType = types.get(key) as FileType<FT>;
+      const fileType = types.get(key) as FileTypeEntry<FT>;
       if (nameOrPath.endsWith(fileType.end)) {
         return fileType;
       }
@@ -35,9 +35,11 @@ export class TypeboxFileTypes<FT> extends FileTypeProvider<FT> {
     return undefined;
   }
   /** Gets file type info by name. */
-  get<K extends keyof FT & string>(typeName: K): FileType<FT, K> | undefined {
+  get<K extends keyof FT & string>(
+    typeName: K,
+  ): FileTypeEntry<FT, K> | undefined {
     const types = this.#types;
-    return types.get(typeName) as FileType<FT, K> | undefined;
+    return types.get(typeName) as FileTypeEntry<FT, K> | undefined;
   }
   /** Sets file type info by name. */
   set(typesByName: {
@@ -81,7 +83,7 @@ export class TypeboxFileTypes<FT> extends FileTypeProvider<FT> {
     let compiler = compiled.get(typeName);
     if (!compiler) {
       // Compile and store
-      const entry = types.get(typeName) as FileType<FT>;
+      const entry = types.get(typeName) as FileTypeEntry<FT>;
       if (!entry) {
         return false;
       }

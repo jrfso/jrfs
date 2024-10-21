@@ -544,7 +544,7 @@ export interface FsTransactions<FT> {
   ): Promise<Entry>;
   /**
    * Writes to an existing file with your `writer` function.
-   * @template T `FileType` name OR the `data` type to write.
+   * @template T File type `(keyof FT)` OR the concrete `data` type to write.
    */
   write<T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
     entry: EntryOrPath,
@@ -553,7 +553,7 @@ export interface FsTransactions<FT> {
   ): Promise<Entry>;
   /**
    * Overwrites an existing file with the given `data`.
-   * @template T `FileType` name OR the `data` type to write.
+   * @template T File type `(keyof FT)` OR the concrete `data` type to write.
    */
   write<T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
     entry: EntryOrPath,

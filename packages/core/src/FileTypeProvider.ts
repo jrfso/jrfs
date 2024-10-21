@@ -2,21 +2,21 @@
 import type {
   FileDataType,
   FileMetaType,
-  FileType,
+  FileTypeEntry,
   FileTypeInfo,
 } from "./types";
 
 export abstract class FileTypeProvider<FT> {
   /**
-   * Returns the first {@link FileType<FT>} where {@link FileTypeInfo.end}
+   * Returns the first {@link FileTypeEntry<FT>} where {@link FileTypeInfo.end}
    * matches the end of the given `nameOrPath`.
    * @param nameOrPath File name or path.
    */
-  abstract fromPath(nameOrPath: string): FileType<FT> | undefined;
+  abstract fromPath(nameOrPath: string): FileTypeEntry<FT> | undefined;
   /** Gets file type info by name. */
   abstract get<T extends keyof FT & string>(
     typeName: T,
-  ): FileType<FT, T> | undefined;
+  ): FileTypeEntry<FT, T> | undefined;
   /** Sets file type info by name. */
   abstract set(typesByName: {
     [T in keyof FT]?: FileTypeInfo<FileMetaType<FT, T>>;

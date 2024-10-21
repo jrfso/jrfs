@@ -202,11 +202,11 @@ export interface FileOf<D = unknown, M = unknown> {
   meta: M;
 }
 /**
- * Type information for any file type.
+ * A {@link FileTypeInfo} with `name` as registered with a `FileTypeProvider`.
  * @template FT File Types interface, to map file type names to TS types.
  * @template T Key of `FT`, a file type name.
  */
-export interface FileType<FT, T extends keyof FT = keyof FT>
+export interface FileTypeEntry<FT, T extends keyof FT = keyof FT>
   extends FileTypeInfo<FileMetaType<FT, T>> {
   name: T & string;
 }
