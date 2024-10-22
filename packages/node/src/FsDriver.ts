@@ -8,7 +8,6 @@ import {
   Driver,
   DriverProps,
   Entry,
-  EntryOfId,
   NodeEntry,
   TransactionParams,
   registerDriver,
