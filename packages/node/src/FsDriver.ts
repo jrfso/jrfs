@@ -9,7 +9,6 @@ import {
   DriverProps,
   Entry,
   NodeEntry,
-  TransactionOutParams,
   TransactionParams,
   registerDriver,
 } from "@jrfs/core";
@@ -262,10 +261,7 @@ export class FsDriver extends Driver {
   // #endregion
   // #region -- FS Actions
   /** Add a directory or a file with data. */
-  async add(
-    params: TransactionParams["add"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
+  async add(params: TransactionParams["add"]): Promise<Entry> {
     return this.#transaction(async () => {
       const { to, data } = params;
       // CONSIDER: Do we need isDir/isFile signaling for the caller here?
@@ -283,19 +279,16 @@ export class FsDriver extends Driver {
         await FSP.writeFile(toPath, json);
       }
       const stats = await FSP.stat(toPath);
-      const target = this.files.add(
-        to,
-        isDir ? { stats } : { data, stats },
-        out,
-      );
+      const target = this.files.add(to, isDir ? { stats } : { data, stats });
       return target;
     });
   }
   /** Move or rename a file/directory.  */
-  async copy(
-    { from, fromEntry, to }: TransactionParams["copy"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
+  async copy({
+    from,
+    fromEntry,
+    to,
+  }: TransactionParams["copy"]): Promise<Entry> {
     return this.#transaction(async () => {
       const fromPath = this.#fullPath(from);
       const toPath = this.#fullPath(to);
@@ -305,14 +298,14 @@ export class FsDriver extends Driver {
         recursive: true,
       });
       const stats = await FSP.stat(toPath);
-      const target = this.files.copy(fromEntry, to, { stats }, out);
+      const target = this.files.copy(fromEntry, to, { stats });
       return target;
     });
   }
   /** Move or rename a file/directory.  */
   async get(
     { from, fromEntry }: TransactionParams["get"],
-    // out?: TransactionOutParams,
+    //
   ): Promise<{ entry: Entry; data: unknown }> {
     return this.#transaction(async () => {
       const fromPath = this.#fullPath(from);
@@ -333,10 +326,11 @@ export class FsDriver extends Driver {
     });
   }
   /** Move or rename a file/directory.  */
-  async move(
-    { from, fromEntry, to }: TransactionParams["move"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
+  async move({
+    from,
+    fromEntry,
+    to,
+  }: TransactionParams["move"]): Promise<Entry> {
     return this.#transaction(async () => {
       const fromPath = this.#fullPath(from);
       const toPath = this.#fullPath(to);
@@ -345,35 +339,37 @@ export class FsDriver extends Driver {
       await FSP.mkdir(toPathParent, { recursive: true });
       await FSP.rename(fromPath, toPath);
       const stats = await FSP.stat(toPath);
-      const target = this.files.move(fromEntry, to, { stats }, out);
+      const target = this.files.move(fromEntry, to, { stats });
       return target;
     });
   }
   /** Remove a file/directory. */
-  async remove(
-    { from, fromEntry }: TransactionParams["remove"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
+  async remove({
+    from,
+    fromEntry,
+  }: TransactionParams["remove"]): Promise<Entry> {
     return this.#transaction(async () => {
       const fullPath = this.#fullPath(from);
       console.log("[FS] rm", from);
       await FSP.rm(fullPath, { recursive: true });
-      const target = this.files.remove(fromEntry, out);
+      const target = this.files.remove(fromEntry);
       return target;
     });
   }
   /** Write to a file. */
-  async write(
-    { data, to, toEntry, patch }: TransactionParams["write"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
+  async write({
+    data,
+    to,
+    toEntry,
+    patch,
+  }: TransactionParams["write"]): Promise<Entry> {
     return this.#transaction(async () => {
       const json = JSON.stringify(data, undefined, 2);
       const fullPath = this.#fullPath(to);
       console.log("[FS] write", to);
       await FSP.writeFile(fullPath, json);
       const stats = await FSP.stat(fullPath);
-      const target = this.files.write(toEntry, { data, stats, patch }, out);
+      const target = this.files.write(toEntry, { data, stats, patch });
       return target;
     });
   }

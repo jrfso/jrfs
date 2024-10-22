@@ -98,8 +98,6 @@ export interface OpenNotification {
 }
 
 export interface TransactionResult {
-  /** The completed transaction number. */
-  tx: number;
   /** Id of the entry affected by the completed transaction. */
   id: string;
 }

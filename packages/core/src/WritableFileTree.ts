@@ -28,18 +28,12 @@ import {
   getCtimeOption,
   isDirectoryId,
 } from "@/types";
-import type { TransactionOutParams } from "./Driver";
 import { FileTree } from "./FileTree";
 
 export interface FileTreeChangeParams {
   /** FS node stats. */
   stats: NodeOptions["stats"];
 }
-
-export type FileTreeChangeResult = FileTreeChange & {
-  target: Entry;
-  tx: number;
-};
 
 export interface FileTreeAddParams extends FileTreeChangeParams {
   /** File data. Required for adding a file. */
@@ -333,11 +327,7 @@ export class WritableFileTree extends FileTree {
    * // Add a file node and possibly a tmp/folder path.
    * const [id, ...parentIds] = tree.add("tmp/folder/file.json", { data });
    */
-  add(
-    path: string,
-    params: FileTreeAddParams,
-    out?: TransactionOutParams,
-  ): Entry {
+  add(path: string, params: FileTreeAddParams): Entry {
     console.log("ADDING TO", path);
     const pathSegments = path.split("/");
     const {
@@ -368,9 +358,6 @@ export class WritableFileTree extends FileTree {
         added: [node.entry],
         tx: this.#nextTx(),
       };
-      if (out) {
-        out.tx = change.tx!;
-      }
       this.#base.onChange(change);
       return node.entry;
     }
@@ -408,19 +395,12 @@ export class WritableFileTree extends FileTree {
       added,
       tx: this.#nextTx(),
     };
-    if (out) {
-      out.tx = change.tx!;
-    }
+
     this.#base.onChange(change);
     return entry;
   }
   /** Copies a file/directory. */
-  copy(
-    src: EntryOrId,
-    to: string,
-    params: FileTreeChangeParams,
-    out?: TransactionOutParams,
-  ): Entry {
+  copy(src: EntryOrId, to: string, params: FileTreeChangeParams): Entry {
     // Find existing destination parent, if any.
 
     const pathSegments = to.split("/");
@@ -503,19 +483,12 @@ export class WritableFileTree extends FileTree {
       added,
       tx: this.#nextTx(),
     };
-    if (out) {
-      out.tx = change.tx!;
-    }
+
     this.#base.onChange(change);
     return newEntry;
   }
   /** Moves or renames a file/directory. */
-  move(
-    src: EntryOrId,
-    to: string,
-    params: FileTreeChangeParams,
-    out?: TransactionOutParams,
-  ): Entry {
+  move(src: EntryOrId, to: string, params: FileTreeChangeParams): Entry {
     const node = this.#getNode(src)!;
 
     // Find existing destination parent, if any.
@@ -569,30 +542,24 @@ export class WritableFileTree extends FileTree {
       changed: [entry],
       tx: this.#nextTx(),
     };
-    if (out) {
-      out.tx = change.tx!;
-    }
+
     this.#base.onChange(change);
     return entry;
   }
   /** Removes the given node entry from the tree. */
-  remove(entry: EntryOrId, out?: TransactionOutParams): Entry {
-    return this.#removeEntry(entry, undefined, out)!;
+  remove(entry: EntryOrId): Entry {
+    return this.#removeEntry(entry, undefined)!;
   }
 
   #removeEntry(
     entry: EntryOrId,
     sync?: { tx: number; removed: string[] },
-    out?: TransactionOutParams,
   ): Entry | undefined {
     // console.log("DELETE", entry);
     const node = this.#getNode(entry);
     if (!node) {
       if (!sync) {
         throw new NodeNotFoundError(entry);
-      }
-      if (out) {
-        out.tx = sync.tx;
       }
       // NOTE: When the sync method calls it doesn't use the return value.
       return undefined;
@@ -633,7 +600,7 @@ export class WritableFileTree extends FileTree {
     return node.entry;
   }
   /** Renames a file/directory. @deprecated Use {@link move} */
-  rename(entry: EntryOrId, name: string, out?: TransactionOutParams): Entry {
+  rename(entry: EntryOrId, name: string): Entry {
     let node = this.#getNode(entry)!;
     // Update our node entry
     node = this.#set(node, {
@@ -645,9 +612,7 @@ export class WritableFileTree extends FileTree {
       changed: [node.entry],
       tx: this.#nextTx(),
     };
-    if (out) {
-      out.tx = change.tx!;
-    }
+
     this.#base.onChange(change);
     return node.entry;
   }
@@ -715,11 +680,7 @@ export class WritableFileTree extends FileTree {
     }
   }
   /** Writes to an existing file. */
-  write(
-    entry: EntryOrId,
-    params: FileTreeWriteParams,
-    out?: TransactionOutParams,
-  ): Entry {
+  write(entry: EntryOrId, params: FileTreeWriteParams): Entry {
     const { data, patch, stats } = params;
     let node = this.#getNode(entry);
     if (!node) {
@@ -737,9 +698,7 @@ export class WritableFileTree extends FileTree {
       patch,
       tx: this.#nextTx(),
     };
-    if (out) {
-      out.tx = change.tx!;
-    }
+
     this.#base.onChange(change);
     return node.entry;
   }

@@ -2,7 +2,6 @@ import {
   type DriverProps,
   type Entry,
   type FileTree,
-  type TransactionOutParams,
   type TransactionParams,
   Driver,
   registerDriver,
@@ -70,11 +69,8 @@ export class WebDriver extends Driver {
   // #region -- FS Actions
 
   /** Add a directory or a file with data. */
-  async add(
-    params: TransactionParams["add"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return fsAction(this.files, this.#client.add(params), out);
+  async add(params: TransactionParams["add"]): Promise<Entry> {
+    return fsAction(this.files, this.#client.add(params));
   }
   /** Get file data.  */
   async get(params: TransactionParams["get"]): Promise<{
@@ -105,43 +101,29 @@ export class WebDriver extends Driver {
     };
   }
   /** Move or rename a file/directory.  */
-  async copy(
-    params: TransactionParams["copy"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return fsAction(this.files, this.#client.copy(params), out);
+  async copy(params: TransactionParams["copy"]): Promise<Entry> {
+    return fsAction(this.files, this.#client.copy(params));
   }
   /** Move or rename a file/directory.  */
-  async move(
-    params: TransactionParams["move"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return fsAction(this.files, this.#client.move(params), out);
+  async move(params: TransactionParams["move"]): Promise<Entry> {
+    return fsAction(this.files, this.#client.move(params));
   }
   /** Remove a file/directory. */
-  async remove(
-    params: TransactionParams["remove"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
+  async remove(params: TransactionParams["remove"]): Promise<Entry> {
     const { files } = this;
     const entry = files.findPathEntry(params.from)!;
-    const { id, tx } = await this.#client.remove(params);
-    if (out) {
-      out.tx = tx;
-    }
+    const { id } = await this.#client.remove(params);
+
     if (files.getEntry(id)) {
       throw new Error(`Entry not removed "${id}".`);
     }
     return entry;
   }
   /** Write to a file. */
-  async write(
-    params: TransactionParams["write"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
+  async write(params: TransactionParams["write"]): Promise<Entry> {
     // TODO: The driver can check before sending if patch?.ctime is out of date.
     // TODO: Even if no patch, we actually MUST pass ctime here too...
-    return fsAction(this.files, this.#client.write(params), out);
+    return fsAction(this.files, this.#client.write(params));
   }
   // #endregion
 }
@@ -164,13 +146,10 @@ registerDriver("web", createWebDriver);
 
 async function fsAction(
   tree: FileTree,
-  action: Promise<{ id: string; tx: number }>,
-  out?: TransactionOutParams,
+  action: Promise<{ id: string }>,
 ): Promise<Entry> {
-  const { id, tx } = await action;
-  if (out) {
-    out.tx = tx;
-  }
+  const { id } = await action;
+
   const entry = tree.getEntry(id);
   if (!entry) {
     throw new Error(`Entry not found "${id}".`);

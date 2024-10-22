@@ -4,7 +4,6 @@ import {
   type FileTree,
   type FileTreeChange,
   type Repository,
-  type TransactionOutParams,
   logFileTreeChange,
 } from "@jrfs/core";
 import type {
@@ -94,7 +93,7 @@ export function createWsServer(params: {
     const json = data.toString("utf8");
     const msg = JSON.parse(json) as AnyRequest;
 
-    // Execute action, send { rx, to: "ok", id, tx } response...
+    // Execute action, send { rx, to: "ok", id } response...
     if (!handleRequest(this, repo, msg)) {
       // TODO: Respond with invalid request error.
       // TODO: Better error logging.
@@ -130,12 +129,12 @@ type RequestHandlers = {
 
 const requestHandlers: RequestHandlers = {
   add(socket, repo, rx, p) {
-    transaction("add", socket, rx, (out) =>
-      repo.fs.add(p.to, "data" in p ? { data: p.data } : {}, out),
+    transaction("add", socket, rx, () =>
+      repo.fs.add(p.to, "data" in p ? { data: p.data } : {}),
     );
   },
   copy(socket, repo, rx, p) {
-    transaction("copy", socket, rx, (out) => repo.fs.copy(p.from, p.to, out));
+    transaction("copy", socket, rx, () => repo.fs.copy(p.from, p.to));
   },
   get(socket, repo, rx, p) {
     const { from } = p;
@@ -150,20 +149,20 @@ const requestHandlers: RequestHandlers = {
     }
   },
   move(socket, repo, rx, p) {
-    transaction("move", socket, rx, (out) => repo.fs.move(p.from, p.to, out));
+    transaction("move", socket, rx, () => repo.fs.move(p.from, p.to));
   },
   remove(socket, repo, rx, p) {
-    transaction("remove", socket, rx, (out) => repo.fs.remove(p.from, out));
+    transaction("remove", socket, rx, () => repo.fs.remove(p.from));
   },
   async write(socket, repo, rx, p) {
-    transaction("write", socket, rx, async (out) => {
+    transaction("write", socket, rx, async () => {
       const { data, patch } = p;
       if (patch) {
-        return repo.fs.patch(p.to, patch, out);
+        return repo.fs.patch(p.to, patch);
       } else if ("data" in p && typeof data !== "undefined") {
         // TODO: We MUST check ctime here or have repo.write do it similar to
         //       how repo.patch already does...
-        return repo.fs.write(p.to, data!, out);
+        return repo.fs.write(p.to, data!);
       } else {
         throw new Error(`[WS] Need data or patch to write to "${p.to}".`);
       }
@@ -269,14 +268,12 @@ async function transaction(
   op: FileTreeChange["op"],
   socket: WebSocket,
   rx: number,
-  run: (out: TransactionOutParams) => Promise<Entry>,
+  run: () => Promise<Entry>,
 ): Promise<void> {
-  /** Object passed to get params out from run->repo->driver->writer. */
-  const out = { tx: 0 } as TransactionOutParams;
   try {
-    const { id } = await run(out);
+    const { id } = await run();
     // CONSIDER: We could get different response types from run based on out...
-    const response = respondTo(op, "ok", rx, { id, tx: out.tx });
+    const response = respondTo(op, "ok", rx, { id });
     send(socket, response);
   } catch (ex) {
     const response = respondTo(op, "error", rx, "" + ex);

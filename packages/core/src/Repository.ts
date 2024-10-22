@@ -21,7 +21,6 @@ import type {
   DriverFactory,
   DriverTypeOptions,
   DriverTypes,
-  TransactionOutParams,
 } from "@/Driver";
 import { FileTree } from "@/FileTree";
 import {
@@ -143,7 +142,6 @@ export class Repository<FT> {
         /** Parent entry. */
         parent?: EntryOfId | null;
       } = {},
-      out?: TransactionOutParams,
     ): Promise<Entry> => {
       const { data, parent } = params;
       if (parent) {
@@ -160,14 +158,12 @@ export class Repository<FT> {
           : {
               to,
             },
-        out,
       );
     },
 
     copy: async (
       entry: EntryOrPath,
       dest: EntryOrPath | null,
-      out?: TransactionOutParams,
     ): Promise<Entry> => {
       const { files } = this;
       const { path: from, entry: fromEntry } = files.entry(entry);
@@ -190,14 +186,11 @@ export class Repository<FT> {
         // NOTE: All paths are relative to Repository root, so no leading "/".
         to = fromEntry.name;
       }
-      return this.#driver.copy(
-        {
-          from,
-          fromEntry,
-          to,
-        },
-        out,
-      );
+      return this.#driver.copy({
+        from,
+        fromEntry,
+        to,
+      });
     },
 
     get: async <T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
@@ -223,7 +216,6 @@ export class Repository<FT> {
     move: async (
       entry: EntryOrPath,
       dest: EntryOrPath | null,
-      out?: TransactionOutParams,
     ): Promise<Entry> => {
       const { files } = this;
       const { path: from, entry: fromEntry } = files.entry(entry);
@@ -246,14 +238,11 @@ export class Repository<FT> {
         // NOTE: All paths are relative to Repository root, so no leading "/".
         to = fromEntry.name;
       }
-      return this.#driver.move(
-        {
-          from,
-          fromEntry,
-          to,
-        },
-        out,
-      );
+      return this.#driver.move({
+        from,
+        fromEntry,
+        to,
+      });
     },
 
     patch: (
@@ -264,7 +253,6 @@ export class Repository<FT> {
         patches: MutativePatches;
         undo?: MutativePatches;
       },
-      out?: TransactionOutParams,
     ): Promise<Entry> => {
       const { files } = this;
       const {
@@ -284,41 +272,28 @@ export class Repository<FT> {
       }
       // CONSIDER: origData could be null...
       const data = applyPatch(origData!, patches);
-      return this.#driver.write(
-        {
-          to,
-          toEntry,
-          data,
-          patch: {
-            ctime,
-            patches,
-            undo,
-          },
+      return this.#driver.write({
+        to,
+        toEntry,
+        data,
+        patch: {
+          ctime,
+          patches,
+          undo,
         },
-        out,
-      );
+      });
     },
 
-    remove: async (
-      entry: EntryOrPath,
-      out?: TransactionOutParams,
-    ): Promise<Entry> => {
+    remove: async (entry: EntryOrPath): Promise<Entry> => {
       const { files } = this;
       const { path: from, entry: fromEntry } = files.entry(entry);
-      return this.#driver.remove(
-        {
-          from,
-          fromEntry,
-        },
-        out,
-      );
+      return this.#driver.remove({
+        from,
+        fromEntry,
+      });
     },
 
-    rename: async (
-      entry: EntryOrPath,
-      name: string,
-      out?: TransactionOutParams,
-    ): Promise<Entry> => {
+    rename: async (entry: EntryOrPath, name: string): Promise<Entry> => {
       const { files } = this;
       const { path: from, entry: fromEntry } = files.entry(entry);
       let to: string;
@@ -328,14 +303,11 @@ export class Repository<FT> {
       } else {
         to = files.parentPath(fromEntry) + "/" + name;
       }
-      return this.#driver.move(
-        {
-          from,
-          fromEntry,
-          to,
-        },
-        out,
-      );
+      return this.#driver.move({
+        from,
+        fromEntry,
+        to,
+      });
     },
     write: async <
       T = unknown,
@@ -345,7 +317,6 @@ export class Repository<FT> {
       writerOrData:
         | ((data: D) => D | Promise<D> | void | Promise<void>)
         | Readonly<D>,
-      out?: TransactionOutParams,
     ): Promise<Entry> => {
       const { files } = this;
       const { path: to, entry: toEntry, data } = files.fileEntry(entry);
@@ -365,28 +336,22 @@ export class Repository<FT> {
           // No change.
           return toEntry;
         }
-        return this.#driver.write(
-          {
-            to,
-            toEntry,
-            data,
-            patch: {
-              ctime: toEntry.ctime,
-              patches,
-              undo,
-            },
-          },
-          out,
-        );
-      }
-      return this.#driver.write(
-        {
+        return this.#driver.write({
           to,
           toEntry,
-          data: writerOrData,
-        },
-        out,
-      );
+          data,
+          patch: {
+            ctime: toEntry.ctime,
+            patches,
+            undo,
+          },
+        });
+      }
+      return this.#driver.write({
+        to,
+        toEntry,
+        data: writerOrData,
+      });
     },
   });
 
@@ -432,10 +397,7 @@ export class Repository<FT> {
     ...params: undefined extends CommandParams<CN>
       ? [params?: CommandParams<CN>]
       : [params: CommandParams<CN>]
-  ): Promise<{
-    tx?: number;
-    of: CommandResult<CN>;
-  }> {
+  ): Promise<CommandResult<CN>> {
     return this.#driver.exec<CommandResult<CN>>(commandName, params);
   }
   // #endregion
@@ -514,24 +476,15 @@ export interface FsTransactions<FT> {
       /** Parent entry. */
       parent?: EntryOfId | null;
     },
-    out?: TransactionOutParams,
   ): Promise<Entry>;
-  copy(
-    entry: EntryOrPath,
-    dest: EntryOrPath | null,
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  copy(entry: EntryOrPath, dest: EntryOrPath | null): Promise<Entry>;
   get<T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
     target: EntryOrPath,
   ): Promise<{
     entry: Entry;
     data: Readonly<D>;
   }>;
-  move(
-    entry: EntryOrPath,
-    dest: EntryOrPath | null,
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  move(entry: EntryOrPath, dest: EntryOrPath | null): Promise<Entry>;
   patch(
     entry: EntryOrPath,
     params: {
@@ -540,14 +493,9 @@ export interface FsTransactions<FT> {
       patches: MutativePatches;
       undo?: MutativePatches;
     },
-    out?: TransactionOutParams,
   ): Promise<Entry>;
-  remove(entry: EntryOrPath, out?: TransactionOutParams): Promise<Entry>;
-  rename(
-    entry: EntryOrPath,
-    name: string,
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  remove(entry: EntryOrPath): Promise<Entry>;
+  rename(entry: EntryOrPath, name: string): Promise<Entry>;
   /**
    * Writes to an existing file with your `writer` function.
    * @template T File type `(keyof FT)` OR the concrete `data` type to write.
@@ -555,7 +503,6 @@ export interface FsTransactions<FT> {
   write<T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
     entry: EntryOrPath,
     writer: (data: D) => D | Promise<D> | void | Promise<void>,
-    out?: TransactionOutParams,
   ): Promise<Entry>;
   /**
    * Overwrites an existing file with the given `data`.
@@ -564,6 +511,5 @@ export interface FsTransactions<FT> {
   write<T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
     entry: EntryOrPath,
     data: Readonly<D>,
-    out?: TransactionOutParams,
   ): Promise<Entry>;
 }

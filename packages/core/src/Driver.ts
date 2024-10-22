@@ -75,43 +75,23 @@ export abstract class Driver {
   // #region -- Transactions
 
   /** Add a directory or a file with data. */
-  abstract add(
-    params: TransactionParams["add"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  abstract add(params: TransactionParams["add"]): Promise<Entry>;
   /** Copy a file/directory.  */
-  abstract copy(
-    params: TransactionParams["copy"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  abstract copy(params: TransactionParams["copy"]): Promise<Entry>;
   /** Get a file's contents.  */
   abstract get(
-    params: TransactionParams["get"] /*,  
-      out?: TransactionOutParams,
-    */,
+    params: TransactionParams["get"],
   ): Promise<{ entry: Entry; data: unknown }>;
   /** Move or rename a file/directory.  */
-  abstract move(
-    params: TransactionParams["move"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  abstract move(params: TransactionParams["move"]): Promise<Entry>;
   /** Remove a file/directory. */
-  abstract remove(
-    params: TransactionParams["remove"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  abstract remove(params: TransactionParams["remove"]): Promise<Entry>;
   /** Write to a file. */
-  abstract write(
-    params: TransactionParams["write"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  abstract write(params: TransactionParams["write"]): Promise<Entry>;
 
   // #endregion
 
-  async exec<T, R = { tx?: number; of: T }>(
-    commandName: string,
-    params: any,
-  ): Promise<R> {
+  async exec<R>(commandName: string, params: any): Promise<R> {
     // //
 
     // // CommandOf[C]["result"]> {
@@ -133,11 +113,6 @@ export abstract class Driver {
     console.log(`TODO: Run ${commandName}`, params);
     return null! as R; // Promise<CommandOf[C]["result"]>;
   }
-}
-
-export interface TransactionOutParams {
-  /** Transaction number. */
-  tx: number;
 }
 
 /** Parameter types for mutation transactions. */
