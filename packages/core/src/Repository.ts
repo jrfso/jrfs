@@ -201,17 +201,17 @@ export class Repository<FT> {
       data: Readonly<D>;
     }> => {
       const { files } = this;
-      const { path: from, entry, data } = files.fileEntry(target);
+      const { path: from, entry, data: cached } = files.fileEntry(target);
       // In memory?
-      if (typeof data !== "undefined") {
+      if (typeof cached !== "undefined") {
         return {
           entry,
-          data: data as Readonly<D>,
+          data: cached as Readonly<D>,
         };
       }
       // Get from driver.
-      const result = await this.#driver.get({ from });
-      return { entry: files.get(result.id), data: data! as Readonly<D> };
+      const { id, data } = await this.#driver.get({ from });
+      return { entry: files.get(id), data: data! as Readonly<D> };
     },
 
     move: async (
