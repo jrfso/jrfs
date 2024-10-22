@@ -1,5 +1,6 @@
 import { WebSocket, WebSocketServer } from "ws";
 import {
+  type CommandName,
   type Entry,
   type FileTree,
   type FileTreeChange,
@@ -13,8 +14,6 @@ import type {
   Notice,
   NotificationParams,
   Notifying,
-  Requesting,
-  RequestParams,
   Responding,
   ServerMessage,
   TransactionResult,
@@ -116,71 +115,39 @@ export function createWsServer(params: {
   };
 }
 
-type RequestHandler<P = unknown> = (
-  socket: WebSocket,
-  repo: Repository<any>,
-  rx: number,
-  params: P,
-) => void;
-
-type RequestHandlers = {
-  [K in Requesting]: RequestHandler<RequestParams[K]>;
-};
-
-const requestHandlers: RequestHandlers = {
-  add(socket, repo, rx, p) {
-    transaction("add", socket, rx, () =>
-      repo.fs.add(p.to, "data" in p ? { data: p.data } : {}),
-    );
-  },
-  copy(socket, repo, rx, p) {
-    transaction("copy", socket, rx, () => repo.fs.copy(p.from, p.to));
-  },
-  get(socket, repo, rx, p) {
-    const { from } = p;
-    try {
-      const entry = repo.files.findPathEntry(from)!;
-      // TODO: Respond with a 404 if (!entry)...
-      const data = repo.files.data(entry);
-      // CONSIDER: Should we compare client `ctime` to signal a change here?
-      send(socket, respondTo("get", "ok", rx, { id: entry.id, data }));
-    } catch (ex) {
-      send(socket, respondTo("get", "error", rx, "" + ex));
-    }
-  },
-  move(socket, repo, rx, p) {
-    transaction("move", socket, rx, () => repo.fs.move(p.from, p.to));
-  },
-  remove(socket, repo, rx, p) {
-    transaction("remove", socket, rx, () => repo.fs.remove(p.from));
-  },
-  async write(socket, repo, rx, p) {
-    transaction("write", socket, rx, async () => {
-      const { data, patch } = p;
-      if (patch) {
-        return repo.fs.patch(p.to, patch);
-      } else if ("data" in p && typeof data !== "undefined") {
-        // TODO: We MUST check ctime here or have repo.write do it similar to
-        //       how repo.patch already does...
-        return repo.fs.write(p.to, data!);
-      } else {
-        throw new Error(`[WS] Need data or patch to write to "${p.to}".`);
-      }
-    });
-  },
-};
+// async function write(socket, repo, rx, p) {
+//   transaction("write", socket, rx, async () => {
+//     const { data, patch } = p;
+//     if (patch) {
+//       return repo.fs.patch(p.to, patch);
+//     } else if ("data" in p && typeof data !== "undefined") {
+//       // TODO: We MUST check ctime here or have repo.write do it similar to
+//       //       how repo.patch already does...
+//       return repo.fs.write(p.to, data!);
+//     } else {
+//       throw new Error(`[WS] Need data or patch to write to "${p.to}".`);
+//     }
+//   });
+// }
 
 function handleRequest(
   socket: WebSocket,
   repo: Repository<any>,
   request: AnyRequest,
 ): boolean {
-  const handler = requestHandlers[request.to] as RequestHandler;
-  if (handler) {
-    handler(socket, repo, request.rx, request.of);
-    return true;
-  }
-  return false;
+  const { to: commandName, of: commandParams, rx } = request;
+  // TODO: if (!commandName exists) return false;
+  repo
+    .exec(commandName, commandParams)
+    .then((result) => {
+      const response = respondTo(commandName, "ok", rx, result);
+      send(socket, response);
+    })
+    .catch((ex) => {
+      const response = respondTo(commandName, "error", rx, "" + ex);
+      send(socket, response);
+    });
+  return true;
 }
 
 /** Loads initial tree data into the given socket. */
@@ -237,7 +204,7 @@ export function notifyOf<T extends Notifying, O = NotificationParams[T]>(
 }
 
 export function respondTo<
-  T extends Requesting,
+  T extends CommandName,
   R extends Responding = "ok",
   O = MethodInfo[T]["response"]["of"] | undefined,
 >(method: T, type: R, rx: number, content: O): BaseResponse<R, O> {
@@ -262,21 +229,4 @@ export function respondTx(
 function send(socket: WebSocket, msg: ServerMessage) {
   const payload = JSON.stringify(msg);
   socket.send(payload, logSendError);
-}
-
-async function transaction(
-  op: FileTreeChange["op"],
-  socket: WebSocket,
-  rx: number,
-  run: () => Promise<Entry>,
-): Promise<void> {
-  try {
-    const { id } = await run();
-    // CONSIDER: We could get different response types from run based on out...
-    const response = respondTo(op, "ok", rx, { id });
-    send(socket, response);
-  } catch (ex) {
-    const response = respondTo(op, "error", rx, "" + ex);
-    send(socket, response);
-  }
 }

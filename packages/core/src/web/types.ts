@@ -1,4 +1,10 @@
-import type { FileTreeChange, MutativePatches } from "@/index";
+import type {
+  CommandName,
+  CommandParams,
+  CommandResult,
+  FileTreeChange,
+  MutativePatches,
+} from "@/index";
 
 // -- Notifications
 
@@ -9,49 +15,6 @@ export interface NotificationParams {
   change: ChangeNotification;
   close: undefined;
   open: OpenNotification;
-}
-
-// -- Requests + Responses
-
-/** Type of request. */
-export type Requesting = keyof RequestParams;
-
-export interface RequestParams {
-  /** Add */
-  add: { to: string; data?: unknown };
-  /** Copy */
-  copy: { from: string; to: string };
-  /** Get Json Data */
-  get: { from: string };
-  /** Move */
-  move: { from: string; to: string };
-  /** Remove */
-  remove: { from: string };
-  /** Write */
-  write:
-    | {
-        to: string;
-        data: unknown;
-        patch?: never;
-      }
-    | {
-        to: string;
-        data?: never;
-        patch: {
-          ctime: number;
-          patches: MutativePatches;
-          undo?: MutativePatches;
-        };
-      };
-}
-
-export interface ResponseValues {
-  add: TransactionResult;
-  copy: TransactionResult;
-  get: DataResult;
-  move: TransactionResult;
-  remove: TransactionResult;
-  write: TransactionResult;
 }
 
 // #region -- Message Bodies
@@ -125,11 +88,11 @@ export type Notifications = {
 // #endregion
 // #region -- Methods `[Request] + [Response]`
 
-export type AnyRequest = MethodInfo[Requesting]["request"];
-export type AnyResponse = MethodInfo[Requesting]["response"];
+export type AnyRequest = MethodInfo[CommandName]["request"];
+export type AnyResponse = MethodInfo[CommandName]["response"];
 
 /** Base request message from `[Client]->[Server]`. */
-export interface BaseRequest<T extends Requesting = Requesting, O = unknown> {
+export interface BaseRequest<T extends CommandName = CommandName, O = unknown> {
   /** Unique request number to respond with. */
   rx: number;
   /** Method name or other resource *to request*. */
@@ -150,9 +113,9 @@ export interface BaseResponse<T extends Responding = Responding, O = unknown> {
 export type ErrorResponse = BaseResponse<"error", string>;
 
 export type MethodInfo = {
-  [K in Requesting]: {
-    request: BaseRequest<K, RequestParams[K]>;
-    response: BaseResponse<"ok", ResponseValues[K]> | ErrorResponse;
+  [K in CommandName]: {
+    request: BaseRequest<K, CommandParams<K>>;
+    response: BaseResponse<"ok", CommandResult<K>> | ErrorResponse;
   };
 };
 

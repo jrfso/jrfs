@@ -1,10 +1,12 @@
 // Local
 import type {
-  // CommandResult,
-  EntryOfId,
+  CommandName,
+  CommandParams,
+  CommandResult,
+  // EntryOfId,
   FileTree,
   FileTypeProvider,
-  MutativePatches,
+  // MutativePatches,
 } from "@/index";
 import { type CreateShortIdFunction } from "@/helpers";
 import { INTERNAL } from "@/internal/types";
@@ -74,86 +76,70 @@ export abstract class Driver {
   // #endregion
   // #region -- Transactions
 
-  /** Add a directory or a file with data. */
-  abstract add(params: TransactionParams["add"]): Promise<EntryOfId>;
-  /** Copy a file/directory.  */
-  abstract copy(params: TransactionParams["copy"]): Promise<EntryOfId>;
-  /** Get a file's contents.  */
-  abstract get(
-    params: TransactionParams["get"],
-  ): Promise<{ id: EntryOfId["id"]; data: unknown }>;
-  /** Move or rename a file/directory.  */
-  abstract move(params: TransactionParams["move"]): Promise<EntryOfId>;
-  /** Remove a file/directory. */
-  abstract remove(params: TransactionParams["remove"]): Promise<EntryOfId>;
-  /** Write to a file. */
-  abstract write(params: TransactionParams["write"]): Promise<EntryOfId>;
+  // /** Add a directory or a file with data. */
+  // abstract add(params: TransactionParams["add"]): Promise<EntryOfId>;
+  // /** Copy a file/directory.  */
+  // abstract copy(params: TransactionParams["copy"]): Promise<EntryOfId>;
+  // /** Get a file's contents.  */
+  // abstract get(
+  //   params: TransactionParams["get"],
+  // ): Promise<{ id: EntryOfId["id"]; data: unknown }>;
+  // /** Move or rename a file/directory.  */
+  // abstract move(params: TransactionParams["move"]): Promise<EntryOfId>;
+  // /** Remove a file/directory. */
+  // abstract remove(params: TransactionParams["remove"]): Promise<EntryOfId>;
+  // /** Write to a file. */
+  // abstract write(params: TransactionParams["write"]): Promise<EntryOfId>;
 
   // #endregion
 
-  async exec<R>(commandName: string, params: any): Promise<R> {
-    // //
-
-    // // CommandOf[C]["result"]> {
-    // // TODO: Validate command.
-    // const validate = null! as any; // CommandOf[C]["validate"];
-    // const files = this.files;
-    // let result = validate.call(
-    //   null,
-    //   {
-    //     files,
-    //     fileTypes: this.fileTypes,
-    //   },
-    //   params,
-    // );
-    // if (result instanceof Promise) {
-    //   result = await result;
-    // }
-    // TODO: Run command via driver.
-    console.log(`TODO: Run ${commandName}`, params);
-    return null! as R; // Promise<CommandOf[C]["result"]>;
-  }
+  abstract exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+    commandName: CN,
+    ...params: undefined extends CommandParams<CN>
+      ? [params?: CommandParams<CN>]
+      : [params: CommandParams<CN>]
+  ): Promise<CommandResult<CN>>;
 }
 
 /** Parameter types for mutation transactions. */
-export interface TransactionParams {
-  add: {
-    /** Path to file/directory. */
-    to: string;
-    /** File data. Required for adding a file. */
-    data?: unknown;
-  };
-  copy: {
-    /** Source path. */
-    from: string;
-    /** Destination path. */
-    to: string;
-  };
-  get: {
-    /** Source path. */
-    from: string;
-  };
-  move: {
-    /** Source path. */
-    from: string;
-    /** Destination path. */
-    to: string;
-  };
-  remove: {
-    /** Path of file/directory to remove. */
-    from: string;
-  };
-  write: {
-    to: string;
-    /** We always expect data so the driver can choose to use data or patch. */
-    data: unknown;
-    patch?: {
-      ctime: number;
-      patches: MutativePatches;
-      undo?: MutativePatches;
-    };
-  };
-}
+// export interface TransactionParams {
+//   add: {
+//     /** Path to file/directory. */
+//     to: string;
+//     /** File data. Required for adding a file. */
+//     data?: unknown;
+//   };
+//   copy: {
+//     /** Source path. */
+//     from: string;
+//     /** Destination path. */
+//     to: string;
+//   };
+//   get: {
+//     /** Source path. */
+//     from: string;
+//   };
+//   move: {
+//     /** Source path. */
+//     from: string;
+//     /** Destination path. */
+//     to: string;
+//   };
+//   remove: {
+//     /** Path of file/directory to remove. */
+//     from: string;
+//   };
+//   write: {
+//     to: string;
+//     /** We always expect data so the driver can choose to use data or patch. */
+//     data: unknown;
+//     patch?: {
+//       ctime: number;
+//       patches: MutativePatches;
+//       undo?: MutativePatches;
+//     };
+//   };
+// }
 
 /** Callback to create a driver. */
 export type DriverFactory = (props: DriverProps, options: any) => Driver;

@@ -4,12 +4,18 @@ import FSP from "node:fs/promises";
 // import * as JsonPatch from "fast-json-patch";
 import { glob } from "glob";
 import {
-  NodeOptions,
+  type CommandName,
+  type CommandParams,
+  type CommandResult,
+  type CommandsRunner,
+  type FsCommandName,
+  type FsCommands,
+  type NodeOptions,
+  type DriverProps,
+  // type EntryOfId,
+  type NodeEntry,
+  type RunCommand,
   Driver,
-  DriverProps,
-  EntryOfId,
-  NodeEntry,
-  TransactionParams,
   registerDriver,
 } from "@jrfs/core";
 // Local
@@ -24,6 +30,98 @@ declare module "@jrfs/core" {
     fs: string | FsDriverOptions;
   }
 }
+
+const fsCommands: CommandsRunner<FsCommands> = {
+  async "fs.add"({ files, hostPath }, params) {
+    const { to, data } = params;
+    // CONSIDER: Do we need isDir/isFile signaling for the caller here?
+    const isDir = !("data" in params);
+    const toPath = hostPath(to);
+    console.log("[FS] add", to);
+    if (isDir) {
+      // Add directory
+      await FSP.mkdir(toPath, { recursive: true });
+    } else {
+      const toPathParent = Path.dirname(toPath);
+      await FSP.mkdir(toPathParent, { recursive: true });
+      // Add file
+      const json = JSON.stringify(data, undefined, 2);
+      await FSP.writeFile(toPath, json);
+    }
+    const stats = await FSP.stat(toPath);
+    const target = files.add(to, isDir ? { stats } : { data, stats });
+    return { id: target.id };
+  },
+  async "fs.copy"({ files, hostPath }, { from, to }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostPath(from);
+    const toPath = hostPath(to);
+    console.log("[FS] cp", from, to);
+    await FSP.cp(fromPath, toPath, {
+      preserveTimestamps: true,
+      recursive: true,
+    });
+    const stats = await FSP.stat(toPath);
+    const target = files.copy(fromEntry, to, { stats });
+    return { id: target.id };
+  },
+  async "fs.get"({ files, hostPath }, { from }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostPath(from);
+    const stats = await FSP.stat(fromPath);
+    if (fromEntry.ctime !== stats.ctime.getTime()) {
+      console.warn(`Error: The ctime in memory != fs "${fromPath}".`);
+      // CONSIDER: Trigger FsWatcher change when FsWatcher feature exists.
+      // - We would also have to return an updated entry.
+    }
+    console.log("READING", fromPath);
+    const jsonText = (await FSP.readFile(fromPath)).toString();
+    const jsonData = JSON.parse(jsonText);
+    files.setData(fromEntry, jsonData);
+    return {
+      id: fromEntry.id,
+      data: jsonData,
+    };
+  },
+  async "fs.move"({ files, hostPath }, { from, to }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostPath(from);
+    const toPath = hostPath(to);
+    const toPathParent = Path.dirname(toPath);
+    console.log("[FS] mv", from, to);
+    await FSP.mkdir(toPathParent, { recursive: true });
+    await FSP.rename(fromPath, toPath);
+    const stats = await FSP.stat(toPath);
+    const target = files.move(fromEntry, to, { stats });
+    return { id: target.id };
+  },
+  async "fs.remove"({ files, hostPath }, { from }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fullPath = hostPath(from);
+    console.log("[FS] rm", from);
+    await FSP.rm(fullPath, { recursive: true });
+    const target = files.remove(fromEntry);
+    return { id: target.id };
+  },
+  async "fs.write"({ files, hostPath }, { to, data, ctime, patch }) {
+    const { entry: toEntry } = files.fileEntry(to);
+    const json = JSON.stringify(data, undefined, 2);
+    const fullPath = hostPath(to);
+    console.log("[FS] write", to);
+    await FSP.writeFile(fullPath, json);
+    const stats = await FSP.stat(fullPath);
+    const target = files.write(toEntry, {
+      data,
+      stats,
+      ...(ctime && patch
+        ? {
+            patch: { ctime, patches: patch },
+          }
+        : undefined),
+    });
+    return { id: target.id };
+  },
+};
 
 export interface FsDriverOptions extends Partial<FsConfig> {
   /** Path to read or save the config file. */
@@ -218,9 +316,9 @@ export class FsDriver extends Driver {
   // #region -- Core
 
   /** Returns the full native path to the given relative node path. */
-  #fullPath(nodePath: string) {
+  #fullPath = (nodePath: string) => {
     return Path.join(this.#rootPath, nodePath);
-  }
+  };
   /** Creates a transaction to prevent overlapped calls on the same driver. */
   #transaction<T>(cb: TransactionCallback<T>): Promise<T> {
     let onReject: (reason?: any) => void;
@@ -260,122 +358,158 @@ export class FsDriver extends Driver {
   }
   // #endregion
   // #region -- FS Actions
-  /** Add a directory or a file with data. */
-  async add(params: TransactionParams["add"]): Promise<EntryOfId> {
-    return this.#transaction(async () => {
-      const { to, data } = params;
-      // CONSIDER: Do we need isDir/isFile signaling for the caller here?
-      const isDir = !("data" in params);
-      const toPath = this.#fullPath(to);
-      console.log("[FS] add", to);
-      if (isDir) {
-        // Add directory
-        await FSP.mkdir(toPath, { recursive: true });
-      } else {
-        const toPathParent = Path.dirname(toPath);
-        await FSP.mkdir(toPathParent, { recursive: true });
-        // Add file
-        const json = JSON.stringify(data, undefined, 2);
-        await FSP.writeFile(toPath, json);
-      }
-      const stats = await FSP.stat(toPath);
-      const target = this.files.add(to, isDir ? { stats } : { data, stats });
-      return { id: target.id };
-    });
-  }
-  /** Move or rename a file/directory.  */
-  async copy({ from, to }: TransactionParams["copy"]): Promise<EntryOfId> {
-    return this.#transaction(async () => {
-      const { files } = this;
-      const { entry: fromEntry } = files.entry(from);
-      const fromPath = this.#fullPath(from);
-      const toPath = this.#fullPath(to);
-      console.log("[FS] cp", from, to);
-      await FSP.cp(fromPath, toPath, {
-        preserveTimestamps: true,
-        recursive: true,
-      });
-      const stats = await FSP.stat(toPath);
-      const target = files.copy(fromEntry, to, { stats });
-      return { id: target.id };
-    });
-  }
-  /** Move or rename a file/directory.  */
-  async get(
-    { from }: TransactionParams["get"],
-    //
-  ): Promise<{ id: EntryOfId["id"]; data: unknown }> {
-    return this.#transaction(async () => {
-      const { files } = this;
-      const { entry: fromEntry } = files.entry(from);
-      const fromPath = this.#fullPath(from);
-      const stats = await FSP.stat(fromPath);
-      if (fromEntry.ctime !== stats.ctime.getTime()) {
-        console.warn(`Error: The ctime in memory != fs "${fromPath}".`);
-        // CONSIDER: Trigger FsWatcher change when FsWatcher feature exists.
-        // - We would also have to return an updated entry.
-      }
-      console.log("READING", fromPath);
-      const jsonText = (await FSP.readFile(fromPath)).toString();
-      const jsonData = JSON.parse(jsonText);
-      files.setData(fromEntry, jsonData);
-      return {
-        id: fromEntry.id,
-        data: jsonData,
-      };
-    });
-  }
-  /** Move or rename a file/directory.  */
-  async move({ from, to }: TransactionParams["move"]): Promise<EntryOfId> {
-    return this.#transaction(async () => {
-      const { files } = this;
-      const { entry: fromEntry } = files.entry(from);
-      const fromPath = this.#fullPath(from);
-      const toPath = this.#fullPath(to);
-      const toPathParent = Path.dirname(toPath);
-      console.log("[FS] mv", from, to);
-      await FSP.mkdir(toPathParent, { recursive: true });
-      await FSP.rename(fromPath, toPath);
-      const stats = await FSP.stat(toPath);
-      const target = files.move(fromEntry, to, { stats });
-      return { id: target.id };
-    });
-  }
-  /** Remove a file/directory. */
-  async remove({ from }: TransactionParams["remove"]): Promise<EntryOfId> {
-    return this.#transaction(async () => {
-      const { files } = this;
-      const { entry: fromEntry } = files.entry(from);
-      const fullPath = this.#fullPath(from);
-      console.log("[FS] rm", from);
-      await FSP.rm(fullPath, { recursive: true });
-      const target = files.remove(fromEntry);
-      return { id: target.id };
-    });
-  }
-  /** Write to a file. */
-  async write({
-    data,
-    to,
-    patch,
-  }: TransactionParams["write"]): Promise<EntryOfId> {
-    return this.#transaction(async () => {
-      const { files } = this;
-      const { entry: toEntry } = files.fileEntry(to);
-      const json = JSON.stringify(data, undefined, 2);
-      const fullPath = this.#fullPath(to);
-      console.log("[FS] write", to);
-      await FSP.writeFile(fullPath, json);
-      const stats = await FSP.stat(fullPath);
-      const target = this.files.write(toEntry, { data, stats, patch });
-      return { id: target.id };
-    });
-  }
+  // /** Add a directory or a file with data. */
+  // async add(params: TransactionParams["add"]): Promise<EntryOfId> {
+  //   return this.#transaction(async () => {
+  //     const { to, data } = params;
+  //     // CONSIDER: Do we need isDir/isFile signaling for the caller here?
+  //     const isDir = !("data" in params);
+  //     const toPath = this.#fullPath(to);
+  //     console.log("[FS] add", to);
+  //     if (isDir) {
+  //       // Add directory
+  //       await FSP.mkdir(toPath, { recursive: true });
+  //     } else {
+  //       const toPathParent = Path.dirname(toPath);
+  //       await FSP.mkdir(toPathParent, { recursive: true });
+  //       // Add file
+  //       const json = JSON.stringify(data, undefined, 2);
+  //       await FSP.writeFile(toPath, json);
+  //     }
+  //     const stats = await FSP.stat(toPath);
+  //     const target = this.files.add(to, isDir ? { stats } : { data, stats });
+  //     return { id: target.id };
+  //   });
+  // }
+  // /** Move or rename a file/directory.  */
+  // async copy({ from, to }: TransactionParams["copy"]): Promise<EntryOfId> {
+  //   return this.#transaction(async () => {
+  //     const { files } = this;
+  //     const { entry: fromEntry } = files.entry(from);
+  //     const fromPath = this.#fullPath(from);
+  //     const toPath = this.#fullPath(to);
+  //     console.log("[FS] cp", from, to);
+  //     await FSP.cp(fromPath, toPath, {
+  //       preserveTimestamps: true,
+  //       recursive: true,
+  //     });
+  //     const stats = await FSP.stat(toPath);
+  //     const target = files.copy(fromEntry, to, { stats });
+  //     return { id: target.id };
+  //   });
+  // }
+  // /** Move or rename a file/directory.  */
+  // async get(
+  //   { from }: TransactionParams["get"],
+  //   //
+  // ): Promise<{ id: EntryOfId["id"]; data: unknown }> {
+  //   return this.#transaction(async () => {
+  //     const { files } = this;
+  //     const { entry: fromEntry } = files.entry(from);
+  //     const fromPath = this.#fullPath(from);
+  //     const stats = await FSP.stat(fromPath);
+  //     if (fromEntry.ctime !== stats.ctime.getTime()) {
+  //       console.warn(`Error: The ctime in memory != fs "${fromPath}".`);
+  //       // CONSIDER: Trigger FsWatcher change when FsWatcher feature exists.
+  //       // - We would also have to return an updated entry.
+  //     }
+  //     console.log("READING", fromPath);
+  //     const jsonText = (await FSP.readFile(fromPath)).toString();
+  //     const jsonData = JSON.parse(jsonText);
+  //     files.setData(fromEntry, jsonData);
+  //     return {
+  //       id: fromEntry.id,
+  //       data: jsonData,
+  //     };
+  //   });
+  // }
+  // /** Move or rename a file/directory.  */
+  // async move({ from, to }: TransactionParams["move"]): Promise<EntryOfId> {
+  //   return this.#transaction(async () => {
+  //     const { files } = this;
+  //     const { entry: fromEntry } = files.entry(from);
+  //     const fromPath = this.#fullPath(from);
+  //     const toPath = this.#fullPath(to);
+  //     const toPathParent = Path.dirname(toPath);
+  //     console.log("[FS] mv", from, to);
+  //     await FSP.mkdir(toPathParent, { recursive: true });
+  //     await FSP.rename(fromPath, toPath);
+  //     const stats = await FSP.stat(toPath);
+  //     const target = files.move(fromEntry, to, { stats });
+  //     return { id: target.id };
+  //   });
+  // }
+  // /** Remove a file/directory. */
+  // async remove({ from }: TransactionParams["remove"]): Promise<EntryOfId> {
+  //   return this.#transaction(async () => {
+  //     const { files } = this;
+  //     const { entry: fromEntry } = files.entry(from);
+  //     const fullPath = this.#fullPath(from);
+  //     console.log("[FS] rm", from);
+  //     await FSP.rm(fullPath, { recursive: true });
+  //     const target = files.remove(fromEntry);
+  //     return { id: target.id };
+  //   });
+  // }
+  // /** Write to a file. */
+  // async write({
+  //   data,
+  //   to,
+  //   patch,
+  // }: TransactionParams["write"]): Promise<EntryOfId> {
+  //   return this.#transaction(async () => {
+  //     const { files } = this;
+  //     const { entry: toEntry } = files.fileEntry(to);
+  //     const json = JSON.stringify(data, undefined, 2);
+  //     const fullPath = this.#fullPath(to);
+  //     console.log("[FS] write", to);
+  //     await FSP.writeFile(fullPath, json);
+  //     const stats = await FSP.stat(fullPath);
+  //     const target = this.files.write(toEntry, { data, stats, patch });
+  //     return { id: target.id };
+  //   });
+  // }
   // #endregion
+
+  async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+    commandName: CN,
+    ...params: undefined extends CommandParams<CN>
+      ? [params?: CommandParams<CN>]
+      : [params: CommandParams<CN>]
+  ): Promise<CommandResult<CN>> {
+    console.log(`[FS] Run ${commandName}`, params);
+    return this.#transaction(async () => {
+      let cmd: RunCommand<CN> | undefined;
+      if (commandName in fsCommands) {
+        cmd = fsCommands[
+          commandName as FsCommandName
+        ] as unknown as RunCommand<CN>;
+      } else {
+        // TODO: Get cmd from registered commands....
+      }
+      if (!cmd) {
+        throw new Error(`Command not found "${commandName}".`);
+      }
+      return cmd(
+        {
+          // TODO: Get entries from caller...
+          entries: {},
+          files: this.files,
+          fileTypes: this.fileTypes,
+          hostPath: this.#fullPath,
+        },
+        params![0]!,
+      );
+    });
+  }
 }
+// #region -- Diagnostics
 
 // Set object name for the default `toString` implementation.
 (FsDriver as any)[Symbol.toStringTag] = "FsDriver";
+
+// #endregion
+// #region -- Driver Factory
 
 function createFsDriver(
   props: DriverProps,
@@ -384,6 +518,9 @@ function createFsDriver(
   return new FsDriver(props, optionsOrConfigPath);
 }
 registerDriver("fs", createFsDriver);
+
+// #endregion
+// #region -- Config
 
 function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
   const options =
@@ -435,6 +572,8 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
     rootPath,
   };
 }
+// #endregion
+// #region -- Transactions
 
 async function runTransactions(transactions: Transactions) {
   transactions.running = true;
@@ -452,3 +591,4 @@ interface Transactions {
   running?: boolean;
   queue: TransactionCallback[];
 }
+// #endregion

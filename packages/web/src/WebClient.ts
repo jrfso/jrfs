@@ -1,5 +1,7 @@
 import {
-  type TransactionParams,
+  type CommandName,
+  type CommandParams,
+  type CommandResult,
   type WritableFileTree,
   // logFileTreeChange,
 } from "@jrfs/core";
@@ -7,11 +9,10 @@ import type {
   AnyRequest,
   AnyResponse,
   BaseRequest,
-  DataResult,
+  // DataResult,
   MethodInfo,
-  Requesting,
   ServerMessage,
-  TransactionResult,
+  // TransactionResult,
 } from "@jrfs/core/web/types";
 
 const REQUEST_TIMEOUT_MS = 30000;
@@ -25,21 +26,19 @@ export interface WebClient {
   open(fileTree: WritableFileTree): Promise<void>;
   close(): Promise<void>;
 
-  add(params: WebClientParams["add"]): Promise<TransactionResult>;
-  get(params: WebClientParams["get"]): Promise<DataResult>;
-  copy(params: WebClientParams["copy"]): Promise<TransactionResult>;
-  move(params: WebClientParams["move"]): Promise<TransactionResult>;
-  remove(params: WebClientParams["remove"]): Promise<TransactionResult>;
-  write(params: WebClientParams["write"]): Promise<TransactionResult>;
+  add(params: CommandParams<"fs.add">): Promise<CommandResult<"fs.add">>;
+  get(params: CommandParams<"fs.get">): Promise<CommandResult<"fs.get">>;
+  copy(params: CommandParams<"fs.copy">): Promise<CommandResult<"fs.copy">>;
+  move(params: CommandParams<"fs.move">): Promise<CommandResult<"fs.move">>;
+  remove(
+    params: CommandParams<"fs.remove">,
+  ): Promise<CommandResult<"fs.remove">>;
+  write(params: CommandParams<"fs.write">): Promise<CommandResult<"fs.write">>;
 }
 
 export interface WebClientError extends Error {
   code?: string;
   statusCode?: number;
-}
-
-export interface WebClientParams extends TransactionParams {
-  // Reserved for WebClient methods that aren't in TransactionParams...
 }
 
 function connect(ws: WebSocket) {
@@ -220,32 +219,32 @@ export function createWebClient(opt: {
 
     async add(body) {
       return sendAndReceive(
-        requestTo("add", rx(), { to: body.to, data: body.data }),
+        requestTo("fs.add", rx(), { to: body.to, data: body.data }),
       );
     },
     async copy(body) {
       return sendAndReceive(
-        requestTo("copy", rx(), { from: body.from, to: body.to }),
+        requestTo("fs.copy", rx(), { from: body.from, to: body.to }),
       );
     },
     async get(body) {
-      return sendAndReceive(requestTo("get", rx(), { from: body.from }));
+      return sendAndReceive(requestTo("fs.get", rx(), { from: body.from }));
     },
     async move(body) {
       return sendAndReceive(
-        requestTo("move", rx(), { from: body.from, to: body.to }),
+        requestTo("fs.move", rx(), { from: body.from, to: body.to }),
       );
     },
     async remove(body) {
-      return sendAndReceive(requestTo("remove", rx(), { from: body.from }));
+      return sendAndReceive(requestTo("fs.remove", rx(), { from: body.from }));
     },
     async write(body) {
-      let req: ReturnType<typeof requestTo<"write">>;
+      let req: ReturnType<typeof requestTo<"fs.write">>;
       const { to, patch } = body;
       if (patch) {
-        req = requestTo("write", rx(), { to, patch });
+        req = requestTo("fs.write", rx(), { to, ctime: 0, patch });
       } else {
-        req = requestTo("write", rx(), { to, data: body.data });
+        req = requestTo("fs.write", rx(), { to, data: body.data });
       }
       return sendAndReceive(req);
     },
@@ -257,7 +256,7 @@ export function isResponse(msg: ServerMessage): msg is AnyResponse {
   return "rx" in msg;
 }
 export function requestTo<
-  T extends Requesting,
+  T extends CommandName,
   O extends MethodInfo[T]["request"]["of"] = MethodInfo[T]["request"]["of"],
 >(method: T, rx: number, params: O): BaseRequest<T, O> {
   return {

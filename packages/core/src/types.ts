@@ -306,7 +306,7 @@ export interface Commands extends FsCommands {
   // };
 }
 
-export type CommandsRunner<Cmds> = {
+export type CommandsRunner<Cmds = Commands> = {
   [CN in keyof Cmds & CommandName]: RunCommand<CN>;
 };
 
@@ -349,10 +349,11 @@ export type CommandType<
       result: Result;
     };
 
-export type RunCommand<CN extends CommandName> = (
-  props: RunCommandProps,
-  params: Commands[CN]["params"],
-) => Promise<Commands[CN]["result"]>;
+export type RunCommand<CN extends CommandName | Omit<string, keyof Commands>> =
+  (
+    props: RunCommandProps,
+    params: CommandParams<CN>,
+  ) => Promise<CommandResult<CN>>;
 
 export interface RunCommandProps {
   // CONSIDER: Add config, driver, plugin...transaction?
@@ -360,6 +361,7 @@ export interface RunCommandProps {
   entries: Partial<Record<"from" | "to", Entry>> & Record<string, Entry>;
   files: WritableFileTree;
   fileTypes: FileTypeProvider<any>;
+  hostPath: (entryPath: string) => string;
 }
 // #endregion
 // #region -- Commands: FS
@@ -373,19 +375,22 @@ export interface FsCommands {
   "fs.write": CommandType<
     | {
         to: string;
-        data: unknown;
+        data?: unknown;
         ctime?: number;
         patch?: never;
       }
     | {
         to: string;
-        data?: never;
+        data?: unknown;
         ctime: number;
         patch: MutativePatches;
       },
     FsEntryIdResult
   >;
 }
+/** Global `keyof` {@link FsCommands} `& CommandName` type. */
+export type FsCommandName = keyof FsCommands & CommandName;
+
 /** `{ id, data }` */
 export interface FsDataResult extends FsEntryIdResult {
   /** Complete data. */

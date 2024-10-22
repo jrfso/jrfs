@@ -149,7 +149,8 @@ export class Repository<FT> {
         const { entry } = files.entry(parent);
         to = files.path(entry) + "/" + to;
       }
-      const { id } = await this.#driver.add(
+      const { id } = await this.#driver.exec(
+        "fs.add",
         "data" in params && typeof data !== "undefined"
           ? {
               to,
@@ -187,7 +188,7 @@ export class Repository<FT> {
         // NOTE: All paths are relative to Repository root, so no leading "/".
         to = fromEntry.name;
       }
-      const { id } = await this.#driver.copy({
+      const { id } = await this.#driver.exec("fs.copy", {
         from,
         to,
       });
@@ -210,7 +211,7 @@ export class Repository<FT> {
         };
       }
       // Get from driver.
-      const { id, data } = await this.#driver.get({ from });
+      const { id, data } = await this.#driver.exec("fs.get", { from });
       return {
         entry: files.get(id),
         data: data as Readonly<D>,
@@ -242,7 +243,7 @@ export class Repository<FT> {
         // NOTE: All paths are relative to Repository root, so no leading "/".
         to = fromEntry.name;
       }
-      const { id } = await this.#driver.move({
+      const { id } = await this.#driver.exec("fs.move", {
         from,
         to,
       });
@@ -267,7 +268,7 @@ export class Repository<FT> {
       if (typeof origData === "undefined") {
         throw new Error(`Entry has no data "${to}".`);
       }
-      const { ctime, patches, undo } = params;
+      const { ctime, patches } = params;
       if (ctime && ctime !== toEntry.ctime) {
         // TODO: Don't just throw an error here. Instead, figure out if the
         // patches are compatible and apply them OR throw a typed error so the
@@ -276,14 +277,11 @@ export class Repository<FT> {
       }
       // CONSIDER: origData could be null...
       const data = applyPatch(origData!, patches);
-      const { id } = await this.#driver.write({
+      const { id } = await this.#driver.exec("fs.write", {
         to,
         data,
-        patch: {
-          ctime,
-          patches,
-          undo,
-        },
+        ctime,
+        patch: patches,
       });
       return files.get(id);
     },
@@ -291,7 +289,7 @@ export class Repository<FT> {
     remove: async (entry: EntryOrPath): Promise<Entry> => {
       const { files } = this;
       const { path: from, entry: target } = files.entry(entry);
-      const { id } = await this.#driver.remove({
+      const { id } = await this.#driver.exec("fs.remove", {
         from,
       });
       if (id !== target.id)
@@ -309,7 +307,7 @@ export class Repository<FT> {
       } else {
         to = files.parentPath(fromEntry) + "/" + name;
       }
-      const { id } = await this.#driver.move({
+      const { id } = await this.#driver.exec("fs.move", {
         from,
         to,
       });
@@ -337,23 +335,20 @@ export class Repository<FT> {
           // data: Draft<T> is default, but for local cast skip the type import.
           data: unknown,
         ) => D | Promise<D> | void | Promise<void>;
-        const [data, patches, undo] = await createPatch(origData, writer);
+        const [data, patches /*,undo*/] = await createPatch(origData, writer);
         if (patches.length < 1) {
           // No change.
           return toEntry;
         }
-        const { id } = await this.#driver.write({
+        const { id } = await this.#driver.exec("fs.write", {
           to,
           data,
-          patch: {
-            ctime: toEntry.ctime,
-            patches,
-            undo,
-          },
+          ctime: toEntry.ctime,
+          patch: patches,
         });
         return files.get(id);
       }
-      const { id } = await this.#driver.write({
+      const { id } = await this.#driver.exec("fs.write", {
         to,
         data: writerOrData,
       });
@@ -404,7 +399,7 @@ export class Repository<FT> {
       ? [params?: CommandParams<CN>]
       : [params: CommandParams<CN>]
   ): Promise<CommandResult<CN>> {
-    return this.#driver.exec<CommandResult<CN>>(commandName, params);
+    return this.#driver.exec(commandName, params);
   }
   // #endregion
 }
