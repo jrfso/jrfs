@@ -78,12 +78,14 @@ export class WebDriver extends Driver {
     data: unknown;
   }> {
     const { files } = this;
+    const { entry: currEntry } = files.fileEntry(params.from);
     // Cached?
     const cache = this.#cache;
     if (cache) {
-      const entry = params.fromEntry;
-      const data = await cache.getData(entry);
+      const data = await cache.getData(currEntry);
       if (typeof data !== "undefined") {
+        // Update our in-memory data.
+        const entry = files.setData(currEntry, data);
         return { entry, data };
       }
     }

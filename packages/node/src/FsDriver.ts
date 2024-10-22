@@ -8,6 +8,7 @@ import {
   Driver,
   DriverProps,
   Entry,
+  EntryOfId,
   NodeEntry,
   TransactionParams,
   registerDriver,
@@ -284,12 +285,10 @@ export class FsDriver extends Driver {
     });
   }
   /** Move or rename a file/directory.  */
-  async copy({
-    from,
-    fromEntry,
-    to,
-  }: TransactionParams["copy"]): Promise<Entry> {
+  async copy({ from, to }: TransactionParams["copy"]): Promise<Entry> {
     return this.#transaction(async () => {
+      const { files } = this;
+      const { entry: fromEntry } = files.entry(from);
       const fromPath = this.#fullPath(from);
       const toPath = this.#fullPath(to);
       console.log("[FS] cp", from, to);
@@ -298,16 +297,18 @@ export class FsDriver extends Driver {
         recursive: true,
       });
       const stats = await FSP.stat(toPath);
-      const target = this.files.copy(fromEntry, to, { stats });
+      const target = files.copy(fromEntry, to, { stats });
       return target;
     });
   }
   /** Move or rename a file/directory.  */
   async get(
-    { from, fromEntry }: TransactionParams["get"],
+    { from }: TransactionParams["get"],
     //
   ): Promise<{ entry: Entry; data: unknown }> {
     return this.#transaction(async () => {
+      const { files } = this;
+      const { entry: fromEntry } = files.entry(from);
       const fromPath = this.#fullPath(from);
       const stats = await FSP.stat(fromPath);
       if (fromEntry.ctime !== stats.ctime.getTime()) {
@@ -318,7 +319,7 @@ export class FsDriver extends Driver {
       console.log("READING", fromPath);
       const jsonText = (await FSP.readFile(fromPath)).toString();
       const jsonData = JSON.parse(jsonText);
-      this.files.setData(fromEntry, jsonData);
+      files.setData(fromEntry, jsonData);
       return {
         entry: fromEntry,
         data: jsonData,
@@ -326,12 +327,10 @@ export class FsDriver extends Driver {
     });
   }
   /** Move or rename a file/directory.  */
-  async move({
-    from,
-    fromEntry,
-    to,
-  }: TransactionParams["move"]): Promise<Entry> {
+  async move({ from, to }: TransactionParams["move"]): Promise<Entry> {
     return this.#transaction(async () => {
+      const { files } = this;
+      const { entry: fromEntry } = files.entry(from);
       const fromPath = this.#fullPath(from);
       const toPath = this.#fullPath(to);
       const toPathParent = Path.dirname(toPath);
@@ -339,31 +338,27 @@ export class FsDriver extends Driver {
       await FSP.mkdir(toPathParent, { recursive: true });
       await FSP.rename(fromPath, toPath);
       const stats = await FSP.stat(toPath);
-      const target = this.files.move(fromEntry, to, { stats });
+      const target = files.move(fromEntry, to, { stats });
       return target;
     });
   }
   /** Remove a file/directory. */
-  async remove({
-    from,
-    fromEntry,
-  }: TransactionParams["remove"]): Promise<Entry> {
+  async remove({ from }: TransactionParams["remove"]): Promise<Entry> {
     return this.#transaction(async () => {
+      const { files } = this;
+      const { entry: fromEntry } = files.entry(from);
       const fullPath = this.#fullPath(from);
       console.log("[FS] rm", from);
       await FSP.rm(fullPath, { recursive: true });
-      const target = this.files.remove(fromEntry);
+      const target = files.remove(fromEntry);
       return target;
     });
   }
   /** Write to a file. */
-  async write({
-    data,
-    to,
-    toEntry,
-    patch,
-  }: TransactionParams["write"]): Promise<Entry> {
+  async write({ data, to, patch }: TransactionParams["write"]): Promise<Entry> {
     return this.#transaction(async () => {
+      const { files } = this;
+      const { entry: toEntry } = files.fileEntry(to);
       const json = JSON.stringify(data, undefined, 2);
       const fullPath = this.#fullPath(to);
       console.log("[FS] write", to);

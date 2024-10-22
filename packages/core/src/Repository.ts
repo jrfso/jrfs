@@ -144,12 +144,12 @@ export class Repository<FT> {
       } = {},
     ): Promise<Entry> => {
       const { data, parent } = params;
+      const { files } = this;
       if (parent) {
-        const { files } = this;
         const { entry } = files.entry(parent);
         to = files.path(entry) + "/" + to;
       }
-      return this.#driver.add(
+      const { id } = await this.#driver.add(
         "data" in params && typeof data !== "undefined"
           ? {
               to,
@@ -159,6 +159,7 @@ export class Repository<FT> {
               to,
             },
       );
+      return files.get(id);
     },
 
     copy: async (
@@ -186,11 +187,11 @@ export class Repository<FT> {
         // NOTE: All paths are relative to Repository root, so no leading "/".
         to = fromEntry.name;
       }
-      return this.#driver.copy({
+      const { id } = await this.#driver.copy({
         from,
-        fromEntry,
         to,
       });
+      return files.get(id);
     },
 
     get: async <T = unknown, D = T extends keyof FT ? FileDataType<FT, T> : T>(
@@ -209,7 +210,7 @@ export class Repository<FT> {
         };
       }
       // Get from driver.
-      const result = await this.#driver.get({ from, fromEntry: entry });
+      const result = await this.#driver.get({ from });
       return result as { entry: Entry; data: Readonly<D> };
     },
 
@@ -238,14 +239,14 @@ export class Repository<FT> {
         // NOTE: All paths are relative to Repository root, so no leading "/".
         to = fromEntry.name;
       }
-      return this.#driver.move({
+      const { id } = await this.#driver.move({
         from,
-        fromEntry,
         to,
       });
+      return files.get(id);
     },
 
-    patch: (
+    patch: async (
       entry: EntryOrPath,
       params: {
         /** ctime used to check if the original changed, before patching. */
@@ -272,9 +273,8 @@ export class Repository<FT> {
       }
       // CONSIDER: origData could be null...
       const data = applyPatch(origData!, patches);
-      return this.#driver.write({
+      const { id } = await this.#driver.write({
         to,
-        toEntry,
         data,
         patch: {
           ctime,
@@ -282,15 +282,16 @@ export class Repository<FT> {
           undo,
         },
       });
+      return files.get(id);
     },
 
     remove: async (entry: EntryOrPath): Promise<Entry> => {
       const { files } = this;
-      const { path: from, entry: fromEntry } = files.entry(entry);
-      return this.#driver.remove({
+      const { path: from } = files.entry(entry);
+      const { id } = await this.#driver.remove({
         from,
-        fromEntry,
       });
+      return files.get(id);
     },
 
     rename: async (entry: EntryOrPath, name: string): Promise<Entry> => {
@@ -303,11 +304,11 @@ export class Repository<FT> {
       } else {
         to = files.parentPath(fromEntry) + "/" + name;
       }
-      return this.#driver.move({
+      const { id } = await this.#driver.move({
         from,
-        fromEntry,
         to,
       });
+      return files.get(id);
     },
     write: async <
       T = unknown,
@@ -336,9 +337,8 @@ export class Repository<FT> {
           // No change.
           return toEntry;
         }
-        return this.#driver.write({
+        const { id } = await this.#driver.write({
           to,
-          toEntry,
           data,
           patch: {
             ctime: toEntry.ctime,
@@ -346,12 +346,13 @@ export class Repository<FT> {
             undo,
           },
         });
+        return files.get(id);
       }
-      return this.#driver.write({
+      const { id } = await this.#driver.write({
         to,
-        toEntry,
         data: writerOrData,
       });
+      return files.get(id);
     },
   });
 

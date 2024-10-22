@@ -455,6 +455,12 @@ export class FileTree {
   // #endregion
   // #region -- Get nodes
 
+  get(id: string): Entry {
+    const node = this.getNode(id);
+    if (!node) throw new NodeNotFoundError(id);
+    return node.entry;
+  }
+
   getNodeInfo(id: string): NodeInfo | undefined {
     const node = this.getNode(id);
     if (!node) {

@@ -1,7 +1,7 @@
 // Local
 import type {
   // CommandResult,
-  Entry,
+  EntryOfId,
   FileTree,
   FileTypeProvider,
   MutativePatches,
@@ -75,19 +75,19 @@ export abstract class Driver {
   // #region -- Transactions
 
   /** Add a directory or a file with data. */
-  abstract add(params: TransactionParams["add"]): Promise<Entry>;
+  abstract add(params: TransactionParams["add"]): Promise<EntryOfId>;
   /** Copy a file/directory.  */
-  abstract copy(params: TransactionParams["copy"]): Promise<Entry>;
+  abstract copy(params: TransactionParams["copy"]): Promise<EntryOfId>;
   /** Get a file's contents.  */
   abstract get(
     params: TransactionParams["get"],
-  ): Promise<{ entry: Entry; data: unknown }>;
+  ): Promise<{ entry: EntryOfId; data: unknown }>;
   /** Move or rename a file/directory.  */
-  abstract move(params: TransactionParams["move"]): Promise<Entry>;
+  abstract move(params: TransactionParams["move"]): Promise<EntryOfId>;
   /** Remove a file/directory. */
-  abstract remove(params: TransactionParams["remove"]): Promise<Entry>;
+  abstract remove(params: TransactionParams["remove"]): Promise<EntryOfId>;
   /** Write to a file. */
-  abstract write(params: TransactionParams["write"]): Promise<Entry>;
+  abstract write(params: TransactionParams["write"]): Promise<EntryOfId>;
 
   // #endregion
 
@@ -126,33 +126,25 @@ export interface TransactionParams {
   copy: {
     /** Source path. */
     from: string;
-
-    fromEntry: Entry;
     /** Destination path. */
     to: string;
   };
   get: {
     /** Source path. */
     from: string;
-    fromEntry: Entry;
   };
   move: {
     /** Source path. */
     from: string;
-
-    fromEntry: Entry;
     /** Destination path. */
     to: string;
   };
   remove: {
     /** Path of file/directory to remove. */
     from: string;
-
-    fromEntry: Entry;
   };
   write: {
     to: string;
-    toEntry: Entry;
     /** We always expect data so the driver can choose to use data or patch. */
     data: unknown;
     patch?: {
