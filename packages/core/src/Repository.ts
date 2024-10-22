@@ -432,8 +432,11 @@ export class Repository<FT> {
     ...params: undefined extends CommandParams<CN>
       ? [params?: CommandParams<CN>]
       : [params: CommandParams<CN>]
-  ): Promise<CommandResult<CN>> {
-    return this.#driver.exec(commandName, params);
+  ): Promise<{
+    tx?: number;
+    of: CommandResult<CN>;
+  }> {
+    return this.#driver.exec<CommandResult<CN>>(commandName, params);
   }
   // #endregion
 }

@@ -1,5 +1,6 @@
 // Local
 import type {
+  // CommandResult,
   Entry,
   FileTree,
   FileTypeProvider,
@@ -107,7 +108,10 @@ export abstract class Driver {
 
   // #endregion
 
-  async exec(commandName: string, params: unknown): Promise<any> {
+  async exec<T, R = { tx?: number; of: T }>(
+    commandName: string,
+    params: any,
+  ): Promise<R> {
     // //
 
     // // CommandOf[C]["result"]> {
@@ -127,7 +131,7 @@ export abstract class Driver {
     // }
     // TODO: Run command via driver.
     console.log(`TODO: Run ${commandName}`, params);
-    return null! as any; // Promise<CommandOf[C]["result"]>;
+    return null! as R; // Promise<CommandOf[C]["result"]>;
   }
 }
 

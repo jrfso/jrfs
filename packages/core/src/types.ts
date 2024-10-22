@@ -329,12 +329,9 @@ export type CommandResult<
   Else = any,
 > = CN extends CommandName
   ? "result" extends keyof Commands[CN]
-    ? {
-        tx?: number;
-        of: Commands[CN]["result"];
-      }
-    : { tx?: number; of: Else }
-  : { tx?: number; of: Else };
+    ? Commands[CN]["result"]
+    : Else
+  : Else;
 
 /** Declares the types that define custom {@link Commands}. */
 export type CommandType<
@@ -360,7 +357,7 @@ export type RunCommand<CN extends CommandName> = (
 export interface RunCommandProps {
   // CONSIDER: Add config, driver, plugin...transaction?
   /** Entries read and cached during run. */
-  entries: Partial<Record<"to" | "from", Entry>> & Record<string, Entry>;
+  entries: Partial<Record<"from" | "to", Entry>> & Record<string, Entry>;
   files: WritableFileTree;
   fileTypes: FileTypeProvider<any>;
 }
