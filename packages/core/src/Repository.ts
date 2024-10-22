@@ -211,7 +211,7 @@ export class Repository<FT> {
       }
       // Get from driver.
       const result = await this.#driver.get({ from });
-      return result as { entry: Entry; data: Readonly<D> };
+      return { entry: files.get(result.id), data: data! as Readonly<D> };
     },
 
     move: async (

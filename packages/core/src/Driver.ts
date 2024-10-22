@@ -81,7 +81,7 @@ export abstract class Driver {
   /** Get a file's contents.  */
   abstract get(
     params: TransactionParams["get"],
-  ): Promise<{ entry: EntryOfId; data: unknown }>;
+  ): Promise<{ id: EntryOfId["id"]; data: unknown }>;
   /** Move or rename a file/directory.  */
   abstract move(params: TransactionParams["move"]): Promise<EntryOfId>;
   /** Remove a file/directory. */

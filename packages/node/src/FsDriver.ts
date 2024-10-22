@@ -7,7 +7,7 @@ import {
   NodeOptions,
   Driver,
   DriverProps,
-  Entry,
+  EntryOfId,
   NodeEntry,
   TransactionParams,
   registerDriver,
@@ -261,7 +261,7 @@ export class FsDriver extends Driver {
   // #endregion
   // #region -- FS Actions
   /** Add a directory or a file with data. */
-  async add(params: TransactionParams["add"]): Promise<Entry> {
+  async add(params: TransactionParams["add"]): Promise<EntryOfId> {
     return this.#transaction(async () => {
       const { to, data } = params;
       // CONSIDER: Do we need isDir/isFile signaling for the caller here?
@@ -280,11 +280,11 @@ export class FsDriver extends Driver {
       }
       const stats = await FSP.stat(toPath);
       const target = this.files.add(to, isDir ? { stats } : { data, stats });
-      return target;
+      return { id: target.id };
     });
   }
   /** Move or rename a file/directory.  */
-  async copy({ from, to }: TransactionParams["copy"]): Promise<Entry> {
+  async copy({ from, to }: TransactionParams["copy"]): Promise<EntryOfId> {
     return this.#transaction(async () => {
       const { files } = this;
       const { entry: fromEntry } = files.entry(from);
@@ -297,14 +297,14 @@ export class FsDriver extends Driver {
       });
       const stats = await FSP.stat(toPath);
       const target = files.copy(fromEntry, to, { stats });
-      return target;
+      return { id: target.id };
     });
   }
   /** Move or rename a file/directory.  */
   async get(
     { from }: TransactionParams["get"],
     //
-  ): Promise<{ entry: Entry; data: unknown }> {
+  ): Promise<{ id: EntryOfId["id"]; data: unknown }> {
     return this.#transaction(async () => {
       const { files } = this;
       const { entry: fromEntry } = files.entry(from);
@@ -320,13 +320,13 @@ export class FsDriver extends Driver {
       const jsonData = JSON.parse(jsonText);
       files.setData(fromEntry, jsonData);
       return {
-        entry: fromEntry,
+        id: fromEntry.id,
         data: jsonData,
       };
     });
   }
   /** Move or rename a file/directory.  */
-  async move({ from, to }: TransactionParams["move"]): Promise<Entry> {
+  async move({ from, to }: TransactionParams["move"]): Promise<EntryOfId> {
     return this.#transaction(async () => {
       const { files } = this;
       const { entry: fromEntry } = files.entry(from);
@@ -338,11 +338,11 @@ export class FsDriver extends Driver {
       await FSP.rename(fromPath, toPath);
       const stats = await FSP.stat(toPath);
       const target = files.move(fromEntry, to, { stats });
-      return target;
+      return { id: target.id };
     });
   }
   /** Remove a file/directory. */
-  async remove({ from }: TransactionParams["remove"]): Promise<Entry> {
+  async remove({ from }: TransactionParams["remove"]): Promise<EntryOfId> {
     return this.#transaction(async () => {
       const { files } = this;
       const { entry: fromEntry } = files.entry(from);
@@ -350,11 +350,15 @@ export class FsDriver extends Driver {
       console.log("[FS] rm", from);
       await FSP.rm(fullPath, { recursive: true });
       const target = files.remove(fromEntry);
-      return target;
+      return { id: target.id };
     });
   }
   /** Write to a file. */
-  async write({ data, to, patch }: TransactionParams["write"]): Promise<Entry> {
+  async write({
+    data,
+    to,
+    patch,
+  }: TransactionParams["write"]): Promise<EntryOfId> {
     return this.#transaction(async () => {
       const { files } = this;
       const { entry: toEntry } = files.fileEntry(to);
@@ -364,7 +368,7 @@ export class FsDriver extends Driver {
       await FSP.writeFile(fullPath, json);
       const stats = await FSP.stat(fullPath);
       const target = this.files.write(toEntry, { data, stats, patch });
-      return target;
+      return { id: target.id };
     });
   }
   // #endregion

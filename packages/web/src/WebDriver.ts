@@ -1,6 +1,7 @@
 import {
   type DriverProps,
   type Entry,
+  type EntryOfId,
   type FileTree,
   type TransactionParams,
   Driver,
@@ -74,7 +75,7 @@ export class WebDriver extends Driver {
   }
   /** Get file data.  */
   async get(params: TransactionParams["get"]): Promise<{
-    entry: Entry;
+    id: EntryOfId["id"];
     data: unknown;
   }> {
     const { files } = this;
@@ -86,7 +87,7 @@ export class WebDriver extends Driver {
       if (typeof data !== "undefined") {
         // Update our in-memory data.
         const entry = files.setData(currEntry, data);
-        return { entry, data };
+        return { id: entry.id, data };
       }
     }
     // Get from server.
@@ -98,7 +99,7 @@ export class WebDriver extends Driver {
     // Update our in-memory data.
     files.setData(entry, result.data);
     return {
-      entry,
+      id: entry.id,
       data: result.data,
     };
   }
