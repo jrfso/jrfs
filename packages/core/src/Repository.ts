@@ -287,11 +287,13 @@ export class Repository<FT> {
 
     remove: async (entry: EntryOrPath): Promise<Entry> => {
       const { files } = this;
-      const { path: from } = files.entry(entry);
+      const { path: from, entry: target } = files.entry(entry);
       const { id } = await this.#driver.remove({
         from,
       });
-      return files.get(id);
+      if (id !== target.id)
+        throw new Error(`Expected removed id "${id}" to match "${target.id}".`);
+      return target;
     },
 
     rename: async (entry: EntryOrPath, name: string): Promise<Entry> => {
