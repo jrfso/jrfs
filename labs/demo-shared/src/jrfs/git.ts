@@ -1,5 +1,4 @@
 import {
-  // CommandsRunner,
   CommandType,
   PluginType,
   registerPlugin,
