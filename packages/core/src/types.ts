@@ -338,16 +338,8 @@ export type CommandType<
   Params = unknown,
   Result = unknown,
 > = undefined extends Params
-  ? {
-      // mode?: "read" | "write";
-      params?: Params;
-      result: Result;
-    }
-  : {
-      // mode?: "read" | "write";
-      params: Params;
-      result: Result;
-    };
+  ? { params?: Params; result: Result }
+  : { params: Params; result: Result };
 
 export type RunCommand<CN extends CommandName | Omit<string, keyof Commands>> =
   (

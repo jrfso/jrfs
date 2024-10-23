@@ -110,16 +110,16 @@ export class WebDriver extends Driver {
       }
     }
     // Get from server.
-    const result = await this.#client.exec("fs.get", params);
-    const entry = files.getEntry(result.id);
+    const { id, data } = await this.#client.exec("fs.get", params);
+    const entry = files.getEntry(id);
     if (!entry) {
-      throw new Error(`Entry not found "${result.id}".`);
+      throw new Error(`Entry not found "${id}".`);
     }
     // Update our in-memory data.
-    files.setData(entry, result.data);
+    files.setData(entry, data);
     return {
-      id: entry.id,
-      data: result.data,
+      id,
+      data,
     };
   }
 }
@@ -139,16 +139,3 @@ function createWebDriver(
   return new WebDriver(props, config);
 }
 registerDriver("web", createWebDriver);
-
-// async function fsAction(
-//   tree: FileTree,
-//   action: Promise<{ id: string }>,
-// ): Promise<Entry> {
-//   const { id } = await action;
-
-//   const entry = tree.getEntry(id);
-//   if (!entry) {
-//     throw new Error(`Entry not found "${id}".`);
-//   }
-//   return entry;
-// }
