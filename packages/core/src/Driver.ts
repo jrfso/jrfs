@@ -2,11 +2,11 @@
 import type {
   CommandName,
   CommandParams,
+  CommandRegistry,
   CommandResult,
-  // EntryOfId,
   FileTree,
   FileTypeProvider,
-  // MutativePatches,
+  RunCommand,
 } from "@/index";
 import { type CreateShortIdFunction } from "@/helpers";
 import { INTERNAL } from "@/internal/types";
@@ -14,6 +14,7 @@ import { WritableFileTree } from "@/WritableFileTree";
 
 /** Base JRFS driver class. */
 export abstract class Driver {
+  #commands: CommandRegistry;
   #createShortId: CreateShortIdFunction;
   #files = null! as WritableFileTree;
   #fileTypes: FileTypeProvider<any>;
@@ -21,11 +22,16 @@ export abstract class Driver {
   #opened = false;
 
   constructor(props: DriverProps) {
+    this.#commands = props.commands;
     this.#createShortId = props.createShortId;
     this.#fileTypes = props.fileTypes;
   }
 
   // #region -- Props
+
+  protected get commands() {
+    return this.#commands;
+  }
 
   protected get files() {
     return this.#files;
@@ -75,6 +81,13 @@ export abstract class Driver {
   }
   // #endregion
 
+  /** Gets a command runner if registered with this driver. */
+  command<CN extends CommandName | Omit<string, CommandName>>(
+    commandName: CN,
+  ): RunCommand<CN> | undefined {
+    return null!;
+  }
+
   abstract exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
     params: CommandParams<CN>,
@@ -85,6 +98,7 @@ export abstract class Driver {
 export type DriverFactory = (props: DriverProps, options: any) => Driver;
 
 export interface DriverProps {
+  commands: CommandRegistry;
   createShortId: CreateShortIdFunction;
   fileTypes: FileTypeProvider<any>;
 }

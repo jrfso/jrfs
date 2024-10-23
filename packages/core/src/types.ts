@@ -306,10 +306,6 @@ export interface Commands extends FsCommands {
   // };
 }
 
-export type CommandsRunner<Cmds = Commands> = {
-  [CN in keyof Cmds & CommandName]: RunCommand<CN>;
-};
-
 /** Global `keyof` {@link Commands} `& string` type. */
 export type CommandName = keyof Commands & string;
 
@@ -322,6 +318,25 @@ export type CommandParams<
     ? Commands[CN]["params"]
     : Else
   : Else;
+
+export interface CommandRegistry {
+  get<CN extends CommandName | Omit<string, CommandName>>(
+    commandName: CN,
+  ): RunCommand<CN> | undefined;
+
+  /** Adds a single command runner. */
+  register<CN extends CommandName | Omit<string, keyof Commands>>(
+    commandName: CN,
+    runner: RunCommand<CN>,
+  ): this;
+  /** Adds command runners from `[name, value]` entries. */
+  register<_CN extends CommandName | Omit<string, keyof Commands>>(
+    commands: Array<any>,
+    runner?: never,
+  ): this;
+  // /** Adds command runners by name. */
+  // register<>(commandsByName: { [CN in CommandName]?: RunCommand<CN> }): this;
+}
 
 /** Gets type of command `result` if `CN` is a command name or `Else`. */
 export type CommandResult<
@@ -354,6 +369,13 @@ export interface RunCommandProps {
   files: WritableFileTree;
   fileTypes: FileTypeProvider<any>;
   hostPath: (entryPath: string) => string;
+}
+/** Helper to define a command runner. */
+export function command<CN extends CommandName>(
+  commandName: CN,
+  runner: RunCommand<CN>,
+): [CN, RunCommand<CN>] {
+  return [commandName, runner];
 }
 // #endregion
 // #region -- Commands: FS

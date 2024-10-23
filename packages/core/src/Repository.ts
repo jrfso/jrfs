@@ -2,6 +2,7 @@
 import {
   type CommandName,
   type CommandParams,
+  type CommandRegistry,
   type CommandResult,
   type Entry,
   type EntryOfId,
@@ -13,6 +14,7 @@ import {
   type PluginName,
   type Plugins,
   type PluginsData,
+  type RunCommand,
   isDirectoryId,
 } from "@/types";
 import type {
@@ -47,6 +49,7 @@ import {
  * supplied to the `Repository`constructor.
  */
 export class Repository<FT> {
+  #commands: CommandRegistry;
   #driver: Driver;
   #files: FileTree;
   #fileTypes: FileTypeProvider<FT>;
@@ -62,10 +65,15 @@ export class Repository<FT> {
       createShortId = defaultCreateShortId,
       plugins: pluginParams = {},
     } = options;
+    // Initialize commands.
+    const commands = createCommandRegistry();
+    this.#commands = commands;
+    // Initialize driver.
     const driverFactory = getDriverFactory(driverType);
     const driverOptions = options[driverType];
     const driver = driverFactory(
       {
+        commands,
         createShortId,
         fileTypes,
       },
@@ -89,6 +97,11 @@ export class Repository<FT> {
     }
   }
   // #region -- Core
+
+  /** Command registry. */
+  protected get commands() {
+    return this.#commands;
+  }
   /** The driver interface of the configured implementation. */
   get driver() {
     return this.#driver;
@@ -354,6 +367,7 @@ export class Repository<FT> {
   }
   // #endregion
   // #region -- Commands
+
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
     ...[params]: undefined extends CommandParams<CN>
@@ -428,7 +442,36 @@ export function registerPlugin<N extends PluginName>(
   return plugin;
 }
 // #endregion
+// #region -- Commands
 
+function createCommandRegistry(): CommandRegistry {
+  const items = new Map<
+    Parameters<CommandRegistry["get"]>[0],
+    RunCommand<any>
+  >();
+  return {
+    register(cmd, runner?: RunCommand<any>) {
+      if (Array.isArray(cmd)) {
+        for (const entry of cmd) {
+          items.set(entry[0], entry[1]);
+        }
+      } else if (runner) {
+        items.set(cmd, runner);
+      }
+      return this;
+    },
+    // addEntries(commands) {
+    //   for (const entry of commands) {
+    //     items.set(entry[0], entry[1]);
+    //   }
+    //   return this;
+    // },
+    get(commandName) {
+      return items.get(commandName);
+    },
+  };
+}
+// #endregion
 export interface FsHelpers<FT> {
   add(
     to: string,

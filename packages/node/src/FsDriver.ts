@@ -7,16 +7,13 @@ import {
   type CommandName,
   type CommandParams,
   type CommandResult,
-  type CommandsRunner,
-  type FsCommandName,
-  type FsCommands,
   type NodeOptions,
   type DriverProps,
   // type EntryOfId,
   type NodeEntry,
-  type RunCommand,
   Driver,
   applyPatch,
+  command,
   registerDriver,
 } from "@jrfs/core";
 // Local
@@ -31,121 +28,6 @@ declare module "@jrfs/core" {
     fs: string | FsDriverOptions;
   }
 }
-
-const fsCommands: CommandsRunner<FsCommands> = {
-  async "fs.add"({ files, hostPath }, params) {
-    const { to, data } = params;
-    // CONSIDER: Do we need isDir/isFile signaling for the caller here?
-    const isDir = !("data" in params);
-    const toPath = hostPath(to);
-    console.log("[FS] add", to);
-    if (isDir) {
-      // Add directory
-      await FSP.mkdir(toPath, { recursive: true });
-    } else {
-      const toPathParent = Path.dirname(toPath);
-      await FSP.mkdir(toPathParent, { recursive: true });
-      // Add file
-      const json = JSON.stringify(data, undefined, 2);
-      await FSP.writeFile(toPath, json);
-    }
-    const stats = await FSP.stat(toPath);
-    const target = files.add(to, isDir ? { stats } : { data, stats });
-    return { id: target.id };
-  },
-  async "fs.copy"({ files, hostPath }, { from, to }) {
-    const { entry: fromEntry } = files.entry(from);
-    const fromPath = hostPath(from);
-    const toPath = hostPath(to);
-    console.log("[FS] cp", from, to);
-    await FSP.cp(fromPath, toPath, {
-      preserveTimestamps: true,
-      recursive: true,
-    });
-    const stats = await FSP.stat(toPath);
-    const target = files.copy(fromEntry, to, { stats });
-    return { id: target.id };
-  },
-  async "fs.get"({ files, hostPath }, { from }) {
-    const { entry: fromEntry } = files.entry(from);
-    const fromPath = hostPath(from);
-    const stats = await FSP.stat(fromPath);
-    if (fromEntry.ctime !== stats.ctime.getTime()) {
-      console.warn(`Error: The ctime in memory != fs "${fromPath}".`);
-      // CONSIDER: Trigger FsWatcher change when FsWatcher feature exists.
-      // - We would also have to return an updated entry.
-    }
-    console.log("READING", fromPath);
-    const jsonText = (await FSP.readFile(fromPath)).toString();
-    const jsonData = JSON.parse(jsonText);
-    files.setData(fromEntry, jsonData);
-    return {
-      id: fromEntry.id,
-      data: jsonData,
-    };
-  },
-  async "fs.move"({ files, hostPath }, { from, to }) {
-    const { entry: fromEntry } = files.entry(from);
-    const fromPath = hostPath(from);
-    const toPath = hostPath(to);
-    const toPathParent = Path.dirname(toPath);
-    console.log("[FS] mv", from, to);
-    await FSP.mkdir(toPathParent, { recursive: true });
-    await FSP.rename(fromPath, toPath);
-    const stats = await FSP.stat(toPath);
-    const target = files.move(fromEntry, to, { stats });
-    return { id: target.id };
-  },
-  async "fs.remove"({ files, hostPath }, { from }) {
-    const { entry: fromEntry } = files.entry(from);
-    const fullPath = hostPath(from);
-    console.log("[FS] rm", from);
-    await FSP.rm(fullPath, { recursive: true });
-    const target = files.remove(fromEntry);
-    return { id: target.id };
-  },
-  async "fs.write"({ files, hostPath }, { to, data, ctime, patch }) {
-    const { entry: toEntry, data: origData } = files.fileEntry(to);
-    // Apply patch?
-    if (patch && typeof data === "undefined") {
-      console.log("[FS] Applying patch...");
-      if (typeof origData === "undefined") {
-        // CONSIDER: Just try and read the file here? Probably a bad idea...
-        throw new Error(`Entry missing data, cannot patch "${to}".`);
-      }
-      if (ctime !== toEntry.ctime) {
-        // TODO: Don't JUST throw an error here. Instead, figure out if the
-        // patches are compatible and apply them OR throw a typed error so the
-        // caller can handle it.
-        throw new Error(`Entry out-of-sync, cannot patch "${to}".`);
-      }
-      // CONSIDER: origData could be null...
-      data = applyPatch(origData!, patch);
-    }
-    // Overwriting?
-    if (!patch) {
-      if (ctime !== toEntry.ctime) {
-        throw new Error(`Entry out-of-sync, cannot overwrite "${to}".`);
-      }
-    }
-    // Write data
-    const json = JSON.stringify(data, undefined, 2);
-    const fullPath = hostPath(to);
-    console.log("[FS] write", to);
-    await FSP.writeFile(fullPath, json);
-    const stats = await FSP.stat(fullPath);
-    const target = files.write(toEntry, {
-      data,
-      stats,
-      ...(ctime && patch
-        ? {
-            patch: { ctime, patches: patch },
-          }
-        : undefined),
-    });
-    return { id: target.id };
-  },
-};
 
 export interface FsDriverOptions extends Partial<FsConfig> {
   /** Path to read or save the config file. */
@@ -176,7 +58,6 @@ export class FsDriver extends Driver {
     const { config, configFile, rootPath, indexFile } =
       openConfig(optionsOrConfigPath);
     super(props);
-
     // Set object name for the default `toString` implementation.
     (this as any)[Symbol.toStringTag] = `FsDriver("${rootPath}")`;
     this.#rootChildDepth = rootPath.split(Path.sep).length;
@@ -186,6 +67,7 @@ export class FsDriver extends Driver {
     if (indexFile) {
       this.#indexFile = indexFile;
     }
+    this.commands.register(fsCommands);
   }
 
   override get rootPath() {
@@ -386,16 +268,9 @@ export class FsDriver extends Driver {
     commandName: CN,
     params: CommandParams<CN>,
   ): Promise<CommandResult<CN>> {
-    console.log(`[FS] Run ${commandName}`, params);
+    console.log(`[FS] Exec ${commandName}`, params);
     return this.#transaction(async () => {
-      let cmd: RunCommand<CN> | undefined;
-      if (commandName in fsCommands) {
-        cmd = fsCommands[
-          commandName as FsCommandName
-        ] as unknown as RunCommand<CN>;
-      } else {
-        // TODO: Get cmd from registered commands....
-      }
+      const cmd = this.commands.get(commandName);
       if (!cmd) {
         throw new Error(`Command not found "${commandName}".`);
       }
@@ -501,3 +376,121 @@ interface Transactions {
   queue: TransactionCallback[];
 }
 // #endregion
+
+const fsCommands = [
+  command("fs.add", async function fsAdd({ files, hostPath }, params) {
+    const { to, data } = params;
+    // CONSIDER: Do we need isDir/isFile signaling for the caller here?
+    const isDir = !("data" in params);
+    const toPath = hostPath(to);
+    console.log("[FS] add", to);
+    if (isDir) {
+      // Add directory
+      await FSP.mkdir(toPath, { recursive: true });
+    } else {
+      const toPathParent = Path.dirname(toPath);
+      await FSP.mkdir(toPathParent, { recursive: true });
+      // Add file
+      const json = JSON.stringify(data, undefined, 2);
+      await FSP.writeFile(toPath, json);
+    }
+    const stats = await FSP.stat(toPath);
+    const target = files.add(to, isDir ? { stats } : { data, stats });
+    return { id: target.id };
+  }),
+  command("fs.copy", async function fsCopy({ files, hostPath }, { from, to }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostPath(from);
+    const toPath = hostPath(to);
+    console.log("[FS] cp", from, to);
+    await FSP.cp(fromPath, toPath, {
+      preserveTimestamps: true,
+      recursive: true,
+    });
+    const stats = await FSP.stat(toPath);
+    const target = files.copy(fromEntry, to, { stats });
+    return { id: target.id };
+  }),
+  command("fs.get", async function fsGet({ files, hostPath }, { from }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostPath(from);
+    const stats = await FSP.stat(fromPath);
+    if (fromEntry.ctime !== stats.ctime.getTime()) {
+      console.warn(`Error: The ctime in memory != fs "${fromPath}".`);
+      // CONSIDER: Trigger FsWatcher change when FsWatcher feature exists.
+      // - We would also have to return an updated entry.
+    }
+    console.log("READING", fromPath);
+    const jsonText = (await FSP.readFile(fromPath)).toString();
+    const jsonData = JSON.parse(jsonText);
+    files.setData(fromEntry, jsonData);
+    return {
+      id: fromEntry.id,
+      data: jsonData,
+    };
+  }),
+  command("fs.move", async function fsMove({ files, hostPath }, { from, to }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostPath(from);
+    const toPath = hostPath(to);
+    const toPathParent = Path.dirname(toPath);
+    console.log("[FS] mv", from, to);
+    await FSP.mkdir(toPathParent, { recursive: true });
+    await FSP.rename(fromPath, toPath);
+    const stats = await FSP.stat(toPath);
+    const target = files.move(fromEntry, to, { stats });
+    return { id: target.id };
+  }),
+  command("fs.remove", async function fsRemove({ files, hostPath }, { from }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fullPath = hostPath(from);
+    console.log("[FS] rm", from);
+    await FSP.rm(fullPath, { recursive: true });
+    const target = files.remove(fromEntry);
+    return { id: target.id };
+  }),
+  command(
+    "fs.write",
+    async function fsWrite({ files, hostPath }, { to, data, ctime, patch }) {
+      const { entry: toEntry, data: origData } = files.fileEntry(to);
+      // Apply patch?
+      if (patch && typeof data === "undefined") {
+        console.log("[FS] Applying patch...");
+        if (typeof origData === "undefined") {
+          // CONSIDER: Just try and read the file here? Probably a bad idea...
+          throw new Error(`Entry missing data, cannot patch "${to}".`);
+        }
+        if (ctime !== toEntry.ctime) {
+          // TODO: Don't JUST throw an error here. Instead, figure out if the
+          // patches are compatible and apply them OR throw a typed error so the
+          // caller can handle it.
+          throw new Error(`Entry out-of-sync, cannot patch "${to}".`);
+        }
+        // CONSIDER: origData could be null...
+        data = applyPatch(origData!, patch);
+      }
+      // Overwriting?
+      if (!patch) {
+        if (ctime !== toEntry.ctime) {
+          throw new Error(`Entry out-of-sync, cannot overwrite "${to}".`);
+        }
+      }
+      // Write data
+      const json = JSON.stringify(data, undefined, 2);
+      const fullPath = hostPath(to);
+      console.log("[FS] write", to);
+      await FSP.writeFile(fullPath, json);
+      const stats = await FSP.stat(fullPath);
+      const target = files.write(toEntry, {
+        data,
+        stats,
+        ...(ctime && patch
+          ? {
+              patch: { ctime, patches: patch },
+            }
+          : undefined),
+      });
+      return { id: target.id };
+    },
+  ),
+];
