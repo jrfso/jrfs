@@ -330,8 +330,8 @@ export interface CommandRegistry {
     runner: RunCommand<CN>,
   ): this;
   /** Adds command runners from `[name, value]` entries. */
-  register<_CN extends CommandName | Omit<string, keyof Commands>>(
-    commands: Array<any>,
+  register<CN extends CommandName | Omit<string, keyof Commands>>(
+    commands: Array<[CN, RunCommand<any>]>,
     runner?: never,
   ): this;
   // /** Adds command runners by name. */
@@ -371,10 +371,10 @@ export interface RunCommandProps {
   hostPath: (entryPath: string) => string;
 }
 /** Helper to define a command runner. */
-export function command<CN extends CommandName>(
+export function command<CN extends CommandName | Omit<string, keyof Commands>>(
   commandName: CN,
   runner: RunCommand<CN>,
-): [CN, RunCommand<CN>] {
+): [CN, RunCommand<any>] {
   return [commandName, runner];
 }
 // #endregion
