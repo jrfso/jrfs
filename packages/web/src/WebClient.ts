@@ -3,16 +3,13 @@ import {
   type CommandParams,
   type CommandResult,
   type WritableFileTree,
-  // logFileTreeChange,
 } from "@jrfs/core";
 import type {
   AnyRequest,
   AnyResponse,
   BaseRequest,
-  // DataResult,
   MethodInfo,
   ServerMessage,
-  // TransactionResult,
 } from "@jrfs/core/web/types";
 
 const REQUEST_TIMEOUT_MS = 30000;

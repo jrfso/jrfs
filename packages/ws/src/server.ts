@@ -15,7 +15,6 @@ import type {
   Notifying,
   Responding,
   ServerMessage,
-  TransactionResult,
 } from "@jrfs/core/web/types";
 
 interface ClientInfo {
@@ -198,17 +197,6 @@ export function respondTo<
   return {
     rx,
     to: type,
-    of: content,
-  };
-}
-
-export function respondTx(
-  rx: number,
-  content: TransactionResult,
-): BaseResponse<"ok", TransactionResult> {
-  return {
-    rx,
-    to: "ok",
     of: content,
   };
 }

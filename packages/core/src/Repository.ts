@@ -96,7 +96,7 @@ export class Repository<FT> {
       }
     }
   }
-  // #region -- Core
+  // #region -- Props
 
   /** Command registry. */
   protected get commands() {
@@ -138,9 +138,7 @@ export class Repository<FT> {
     return (this as any)[Symbol.toStringTag];
   }
   // #endregion
-  // #region -- FS Actions
-
-  // CONSIDER: Do more or less validation before passing FS actions to driver?
+  // #region -- FS Commands
 
   #fs: FsHelpers<FT> = Object.freeze({
     add: async (
@@ -455,23 +453,20 @@ function createCommandRegistry(): CommandRegistry {
         for (const entry of cmd) {
           items.set(entry[0], entry[1]);
         }
+        // POSSIBLE: Add from Record<name,runner> e.g.
+        // else if(cmd) { for (c in cmd){ items.set(c, cmd[c]); }}
       } else if (runner) {
         items.set(cmd, runner);
       }
       return this;
     },
-    // addEntries(commands) {
-    //   for (const entry of commands) {
-    //     items.set(entry[0], entry[1]);
-    //   }
-    //   return this;
-    // },
     get(commandName) {
       return items.get(commandName);
     },
   };
 }
 // #endregion
+
 export interface FsHelpers<FT> {
   add(
     to: string,
@@ -490,15 +485,6 @@ export interface FsHelpers<FT> {
     data: Readonly<D>;
   }>;
   move(entry: EntryOrPath, dest: EntryOrPath | null): Promise<Entry>;
-  // patch(
-  //   entry: EntryOrPath,
-  //   params: {
-  //     /** ctime used to check if the original changed, before patching. */
-  //     ctime: number;
-  //     patches: MutativePatches;
-  //     undo?: MutativePatches;
-  //   },
-  // ): Promise<Entry>;
   remove(entry: EntryOrPath): Promise<Entry>;
   rename(entry: EntryOrPath, name: string): Promise<Entry>;
   /**

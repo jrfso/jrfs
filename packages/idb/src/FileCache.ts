@@ -138,6 +138,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
       if (unsubFromDataChanges) unsubFromDataChanges();
       if (unsubFromTreeChanges) unsubFromTreeChanges();
       if (db) db.close();
+      dbName = null!;
     },
     async getData<T = unknown>(entry: Entry) {
       // Cached item?
@@ -148,9 +149,14 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
       // Return cached data.
       return item.data as T;
     },
-    async remove() {
+    async remove(tree: FileTree) {
+      const removeDbName = defaultDbName + (!tree.rid ? "" : "_" + tree.rid);
+      // Close first?
+      if (dbName === removeDbName) {
+        await fileCache.close();
+      }
       // CONSIDER: Handle blocked callback of deleteDB?
-      await deleteDB(dbName);
+      await deleteDB(removeDbName);
     },
   };
   return fileCache;
