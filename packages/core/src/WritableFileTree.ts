@@ -40,6 +40,8 @@ export interface FileTreeAddParams extends FileTreeChangeParams {
   data?: unknown;
 }
 
+// TODO: Reshape FileTreeWriteParams closer to FsCommands["fs.write"]["params"]
+
 export interface FileTreeWriteParams extends FileTreeChangeParams {
   data: unknown;
   patch?: {

@@ -16,6 +16,7 @@ import {
   type NodeEntry,
   type RunCommand,
   Driver,
+  applyPatch,
   registerDriver,
 } from "@jrfs/core";
 // Local
@@ -104,7 +105,30 @@ const fsCommands: CommandsRunner<FsCommands> = {
     return { id: target.id };
   },
   async "fs.write"({ files, hostPath }, { to, data, ctime, patch }) {
-    const { entry: toEntry } = files.fileEntry(to);
+    const { entry: toEntry, data: origData } = files.fileEntry(to);
+    // Apply patch?
+    if (patch && typeof data === "undefined") {
+      console.log("[FS] Applying patch...");
+      if (typeof origData === "undefined") {
+        // CONSIDER: Just try and read the file here? Probably a bad idea...
+        throw new Error(`Entry missing data, cannot patch "${to}".`);
+      }
+      if (ctime !== toEntry.ctime) {
+        // TODO: Don't JUST throw an error here. Instead, figure out if the
+        // patches are compatible and apply them OR throw a typed error so the
+        // caller can handle it.
+        throw new Error(`Entry out-of-sync, cannot patch "${to}".`);
+      }
+      // CONSIDER: origData could be null...
+      data = applyPatch(origData!, patch);
+    }
+    // Overwriting?
+    if (!patch) {
+      if (ctime !== toEntry.ctime) {
+        throw new Error(`Entry out-of-sync, cannot overwrite "${to}".`);
+      }
+    }
+    // Write data
     const json = JSON.stringify(data, undefined, 2);
     const fullPath = hostPath(to);
     console.log("[FS] write", to);

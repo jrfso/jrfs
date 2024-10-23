@@ -8,7 +8,6 @@ import {
   type EntryOrPath,
   type FileDataType,
   type FileTypeProvider,
-  type MutativePatches,
   type NodeInfo,
   type Plugin,
   type PluginName,
@@ -25,7 +24,6 @@ import type {
 import { FileTree } from "@/FileTree";
 import {
   type CreateShortIdFunction,
-  applyPatch,
   createPatch,
   createShortId as defaultCreateShortId,
 } from "@/helpers";
@@ -250,42 +248,6 @@ export class Repository<FT> {
       return files.get(id);
     },
 
-    patch: async (
-      entry: EntryOrPath,
-      params: {
-        /** ctime used to check if the original changed, before patching. */
-        ctime: number;
-        patches: MutativePatches;
-        undo?: MutativePatches;
-      },
-    ): Promise<Entry> => {
-      const { files } = this;
-      const {
-        path: to,
-        entry: toEntry,
-        data: origData,
-      } = files.fileEntry(entry);
-      if (typeof origData === "undefined") {
-        throw new Error(`Entry has no data "${to}".`);
-      }
-      const { ctime, patches } = params;
-      if (ctime && ctime !== toEntry.ctime) {
-        // TODO: Don't just throw an error here. Instead, figure out if the
-        // patches are compatible and apply them OR throw a typed error so the
-        // caller can handle it.
-        throw new Error(`Entry cannot be patched "${to}".`);
-      }
-      // CONSIDER: origData could be null...
-      const data = applyPatch(origData!, patches);
-      const { id } = await this.#driver.exec("fs.write", {
-        to,
-        data,
-        ctime,
-        patch: patches,
-      });
-      return files.get(id);
-    },
-
     remove: async (entry: EntryOrPath): Promise<Entry> => {
       const { files } = this;
       const { path: from, entry: target } = files.entry(entry);
@@ -486,15 +448,15 @@ export interface FsCommander<FT> {
     data: Readonly<D>;
   }>;
   move(entry: EntryOrPath, dest: EntryOrPath | null): Promise<Entry>;
-  patch(
-    entry: EntryOrPath,
-    params: {
-      /** ctime used to check if the original changed, before patching. */
-      ctime: number;
-      patches: MutativePatches;
-      undo?: MutativePatches;
-    },
-  ): Promise<Entry>;
+  // patch(
+  //   entry: EntryOrPath,
+  //   params: {
+  //     /** ctime used to check if the original changed, before patching. */
+  //     ctime: number;
+  //     patches: MutativePatches;
+  //     undo?: MutativePatches;
+  //   },
+  // ): Promise<Entry>;
   remove(entry: EntryOrPath): Promise<Entry>;
   rename(entry: EntryOrPath, name: string): Promise<Entry>;
   /**

@@ -127,11 +127,8 @@ function handleRequest(
 
   // TODO: if (!commandName exists) return false;
 
-  const cmd: Promise<CommandResult<AnyRequest["to"]>> =
-    commandName === "fs.write"
-      ? handleWrite(repo, commandParams)
-      : repo.exec(commandName, commandParams);
-  cmd
+  repo
+    .exec(commandName, commandParams)
     .then((result) => {
       const response = respondTo(commandName, "ok", rx, result);
       send(socket, response);
@@ -141,29 +138,6 @@ function handleRequest(
       send(socket, response);
     });
   return true;
-}
-
-// TODO: Remove handleWrite after FsDriver performs the patch, not Repository.
-
-async function handleWrite(
-  repo: Repository<any>,
-  params: CommandParams<"fs.write">,
-): Promise<CommandResult<"fs.write">> {
-  const { to, data, ctime, patch } = params;
-  if (patch) {
-    const { id } = await repo.fs.patch(to, {
-      ctime,
-      patches: patch,
-    });
-    return { id };
-  } else if ("data" in params && typeof data !== "undefined") {
-    // TODO: We MUST check ctime here for existing files OR have
-    //       repo.write do it similar to how repo.patch does...
-    const { id } = await repo.fs.write(to, data!);
-    return { id };
-  } else {
-    throw new Error(`[WS] Need data or patch to write to "${to}".`);
-  }
 }
 
 /** Loads initial tree data into the given socket. */

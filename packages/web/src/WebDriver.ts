@@ -73,68 +73,6 @@ export class WebDriver extends Driver {
     return (this as any)[Symbol.toStringTag];
   }
   // #endregion
-  // #region -- FS Actions
-
-  // /** Add a directory or a file with data. */
-  // async add(params: TransactionParams["add"]): Promise<Entry> {
-  //   return fsAction(this.files, this.#client.add(params));
-  // }
-  // /** Get file data.  */
-  // async get(params: CommandParams<"fs.get">): Promise<{
-  //   id: EntryOfId["id"];
-  //   data: unknown;
-  // }> {
-  //   const { files } = this;
-  //   const { entry: currEntry } = files.fileEntry(params.from);
-  //   // Cached?
-  //   const cache = this.#cache;
-  //   if (cache) {
-  //     const data = await cache.getData(currEntry);
-  //     if (typeof data !== "undefined") {
-  //       // Update our in-memory data.
-  //       const entry = files.setData(currEntry, data);
-  //       return { id: entry.id, data };
-  //     }
-  //   }
-  //   // Get from server.
-  //   const result = await this.#client.get(params);
-  //   const entry = files.getEntry(result.id);
-  //   if (!entry) {
-  //     throw new Error(`Entry not found "${result.id}".`);
-  //   }
-  //   // Update our in-memory data.
-  //   files.setData(entry, result.data);
-  //   return {
-  //     id: entry.id,
-  //     data: result.data,
-  //   };
-  // }
-  // /** Move or rename a file/directory.  */
-  // async copy(params: TransactionParams["copy"]): Promise<Entry> {
-  //   return fsAction(this.files, this.#client.copy(params));
-  // }
-  // /** Move or rename a file/directory.  */
-  // async move(params: TransactionParams["move"]): Promise<Entry> {
-  //   return fsAction(this.files, this.#client.move(params));
-  // }
-  // /** Remove a file/directory. */
-  // async remove(params: TransactionParams["remove"]): Promise<Entry> {
-  //   const { files } = this;
-  //   const entry = files.findPathEntry(params.from)!;
-  //   const { id } = await this.#client.remove(params);
-
-  //   if (files.getEntry(id)) {
-  //     throw new Error(`Entry not removed "${id}".`);
-  //   }
-  //   return entry;
-  // }
-  // /** Write to a file. */
-  // async write(params: TransactionParams["write"]): Promise<Entry> {
-  //   // TODO: The driver can check before sending if patch?.ctime is out of date.
-  //   // TODO: Even if no patch, we actually MUST pass ctime here too...
-  //   return fsAction(this.files, this.#client.write(params));
-  // }
-  // #endregion
 
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
@@ -143,6 +81,11 @@ export class WebDriver extends Driver {
     console.log(`[FS] Run ${commandName}`, params);
     if (commandName === "fs.get") {
       return this.#getCached(params) as CommandResult<CN>;
+    } else if (commandName === "fs.write") {
+      if ("patch" in params && "data" in params) {
+        // Don't send the data, just the patch.
+        delete params.data;
+      }
     } else {
       // TODO: Get cmd from registered commands, to run here...
     }

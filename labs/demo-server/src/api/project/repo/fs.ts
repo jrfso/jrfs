@@ -125,12 +125,12 @@ export default apiController(function projectRepoFsApi(api, options) {
           if (!body.patches || !body.undo) {
             throw new Error(`Need data or patches to write to "${body.to}".`);
           }
-          entry = await repo.fs.patch(entry, {
+          const { id } = await repo.exec("fs.write", {
+            to: body.to,
             ctime: body.ctime!,
-            patches: body.patches,
-            undo: body.undo,
+            patch: body.patches,
           });
-          return entry;
+          return repo.files.get(id);
         } else if (typeof body.data === "undefined") {
           throw new Error(`Need data or patches to write to "${body.to}".`);
         } else {
