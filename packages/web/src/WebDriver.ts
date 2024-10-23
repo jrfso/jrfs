@@ -4,9 +4,9 @@ import {
   type CommandResult,
   // type CommandsRunner,
   type DriverProps,
-  type Entry,
+  // type Entry,
   type EntryOfId,
-  type FileTree,
+  // type FileTree,
   // type FsCommandName,
   // type FsCommands,
   // type RunCommand,
@@ -138,37 +138,19 @@ export class WebDriver extends Driver {
 
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
-    ...params: undefined extends CommandParams<CN>
-      ? [params?: CommandParams<CN>]
-      : [params: CommandParams<CN>]
+    params: CommandParams<CN>,
   ): Promise<CommandResult<CN>> {
     console.log(`[FS] Run ${commandName}`, params);
     if (commandName === "fs.get") {
-      return this.#getCachedFirst(params[0]!) as CommandResult<CN>;
+      return this.#getCached(params) as CommandResult<CN>;
     } else {
       // TODO: Get cmd from registered commands, to run here...
     }
-
-    // TODO: Send command using WebClient...
-
-    // return fsAction(this.files, this.#client)
-    // return cmd(
-    //   {
-    //     // TODO: Get entries from caller...
-    //     entries: {},
-    //     files: this.files,
-    //     fileTypes: this.fileTypes,
-    //     hostPath: function dummyHostPath(s) {
-    //       return s;
-    //     },
-    //   },
-    //   params![0]!,
-    // );
-    return null!;
+    return this.#client.exec(commandName, params);
   }
 
   /** Get file data.  */
-  async #getCachedFirst(params: CommandParams<"fs.get">): Promise<{
+  async #getCached(params: CommandParams<"fs.get">): Promise<{
     id: EntryOfId["id"];
     data: unknown;
   }> {
@@ -185,7 +167,7 @@ export class WebDriver extends Driver {
       }
     }
     // Get from server.
-    const result = await this.#client.get(params);
+    const result = await this.#client.exec("fs.get", params);
     const entry = files.getEntry(result.id);
     if (!entry) {
       throw new Error(`Entry not found "${result.id}".`);

@@ -473,9 +473,7 @@ export class FsDriver extends Driver {
 
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
-    ...params: undefined extends CommandParams<CN>
-      ? [params?: CommandParams<CN>]
-      : [params: CommandParams<CN>]
+    params: CommandParams<CN>,
   ): Promise<CommandResult<CN>> {
     console.log(`[FS] Run ${commandName}`, params);
     return this.#transaction(async () => {
@@ -498,7 +496,7 @@ export class FsDriver extends Driver {
           fileTypes: this.fileTypes,
           hostPath: this.#fullPath,
         },
-        params![0]!,
+        params,
       );
     });
   }

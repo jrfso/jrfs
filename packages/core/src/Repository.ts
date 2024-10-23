@@ -395,11 +395,11 @@ export class Repository<FT> {
   // #region -- Commands
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
-    ...params: undefined extends CommandParams<CN>
-      ? [params?: CommandParams<CN>]
-      : [params: CommandParams<CN>]
+    ...[params]: undefined extends CommandParams<CN>
+      ? [CommandParams<CN>?]
+      : [CommandParams<CN>]
   ): Promise<CommandResult<CN>> {
-    return this.#driver.exec(commandName, params);
+    return this.#driver.exec(commandName, params!);
   }
   // #endregion
 }

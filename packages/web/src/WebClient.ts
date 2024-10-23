@@ -26,14 +26,10 @@ export interface WebClient {
   open(fileTree: WritableFileTree): Promise<void>;
   close(): Promise<void>;
 
-  add(params: CommandParams<"fs.add">): Promise<CommandResult<"fs.add">>;
-  get(params: CommandParams<"fs.get">): Promise<CommandResult<"fs.get">>;
-  copy(params: CommandParams<"fs.copy">): Promise<CommandResult<"fs.copy">>;
-  move(params: CommandParams<"fs.move">): Promise<CommandResult<"fs.move">>;
-  remove(
-    params: CommandParams<"fs.remove">,
-  ): Promise<CommandResult<"fs.remove">>;
-  write(params: CommandParams<"fs.write">): Promise<CommandResult<"fs.write">>;
+  exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+    commandName: CN,
+    params: CommandParams<CN>,
+  ): Promise<CommandResult<CN>>;
 }
 
 export interface WebClientError extends Error {
@@ -217,37 +213,46 @@ export function createWebClient(opt: {
       tree = null!;
     },
 
-    async add(body) {
+    async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+      commandName: CN,
+      params: CommandParams<CN>,
+    ): Promise<CommandResult<CN>> {
       return sendAndReceive(
-        requestTo("fs.add", rx(), { to: body.to, data: body.data }),
+        requestTo(commandName as CommandName, rx(), params),
       );
     },
-    async copy(body) {
-      return sendAndReceive(
-        requestTo("fs.copy", rx(), { from: body.from, to: body.to }),
-      );
-    },
-    async get(body) {
-      return sendAndReceive(requestTo("fs.get", rx(), { from: body.from }));
-    },
-    async move(body) {
-      return sendAndReceive(
-        requestTo("fs.move", rx(), { from: body.from, to: body.to }),
-      );
-    },
-    async remove(body) {
-      return sendAndReceive(requestTo("fs.remove", rx(), { from: body.from }));
-    },
-    async write(body) {
-      let req: ReturnType<typeof requestTo<"fs.write">>;
-      const { to, patch } = body;
-      if (patch) {
-        req = requestTo("fs.write", rx(), { to, ctime: 0, patch });
-      } else {
-        req = requestTo("fs.write", rx(), { to, data: body.data });
-      }
-      return sendAndReceive(req);
-    },
+
+    // async add(body) {
+    //   return sendAndReceive(
+    //     requestTo("fs.add", rx(), { to: body.to, data: body.data }),
+    //   );
+    // },
+    // async copy(body) {
+    //   return sendAndReceive(
+    //     requestTo("fs.copy", rx(), { from: body.from, to: body.to }),
+    //   );
+    // },
+    // async get(body) {
+    //   return sendAndReceive(requestTo("fs.get", rx(), { from: body.from }));
+    // },
+    // async move(body) {
+    //   return sendAndReceive(
+    //     requestTo("fs.move", rx(), { from: body.from, to: body.to }),
+    //   );
+    // },
+    // async remove(body) {
+    //   return sendAndReceive(requestTo("fs.remove", rx(), { from: body.from }));
+    // },
+    // async write(body) {
+    //   let req: ReturnType<typeof requestTo<"fs.write">>;
+    //   const { to, patch } = body;
+    //   if (patch) {
+    //     req = requestTo("fs.write", rx(), { to, ctime: 0, patch });
+    //   } else {
+    //     req = requestTo("fs.write", rx(), { to, data: body.data });
+    //   }
+    //   return sendAndReceive(req);
+    // },
   };
   return client;
 }

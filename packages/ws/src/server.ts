@@ -1,7 +1,9 @@
 import { WebSocket, WebSocketServer } from "ws";
 import {
   type CommandName,
-  type Entry,
+  type CommandParams,
+  type CommandResult,
+  // type Entry,
   type FileTree,
   type FileTreeChange,
   type Repository,
@@ -97,6 +99,7 @@ export function createWsServer(params: {
       // TODO: Respond with invalid request error.
       // TODO: Better error logging.
       console.error("[WS] Invalid request.");
+      send(this, respondTo(msg.to, "error", msg.rx, "Invalid request."));
       return;
     }
   }
@@ -115,30 +118,20 @@ export function createWsServer(params: {
   };
 }
 
-// async function write(socket, repo, rx, p) {
-//   transaction("write", socket, rx, async () => {
-//     const { data, patch } = p;
-//     if (patch) {
-//       return repo.fs.patch(p.to, patch);
-//     } else if ("data" in p && typeof data !== "undefined") {
-//       // TODO: We MUST check ctime here or have repo.write do it similar to
-//       //       how repo.patch already does...
-//       return repo.fs.write(p.to, data!);
-//     } else {
-//       throw new Error(`[WS] Need data or patch to write to "${p.to}".`);
-//     }
-//   });
-// }
-
 function handleRequest(
   socket: WebSocket,
   repo: Repository<any>,
   request: AnyRequest,
 ): boolean {
   const { to: commandName, of: commandParams, rx } = request;
+
   // TODO: if (!commandName exists) return false;
-  repo
-    .exec(commandName, commandParams)
+
+  const cmd: Promise<CommandResult<AnyRequest["to"]>> =
+    commandName === "fs.write"
+      ? handleWrite(repo, commandParams)
+      : repo.exec(commandName, commandParams);
+  cmd
     .then((result) => {
       const response = respondTo(commandName, "ok", rx, result);
       send(socket, response);
@@ -148,6 +141,27 @@ function handleRequest(
       send(socket, response);
     });
   return true;
+}
+
+async function handleWrite(
+  repo: Repository<any>,
+  params: CommandParams<"fs.write">,
+): Promise<CommandResult<"fs.write">> {
+  const { to, data, ctime, patch } = params;
+  if (patch) {
+    const { id } = await repo.fs.patch(to, {
+      ctime,
+      patches: patch,
+    });
+    return { id };
+  } else if ("data" in params && typeof data !== "undefined") {
+    // TODO: We MUST check ctime here for existing files OR have
+    //       repo.write do it similar to how repo.patch does...
+    const { id } = await repo.fs.write(to, data!);
+    return { id };
+  } else {
+    throw new Error(`[WS] Need data or patch to write to "${to}".`);
+  }
 }
 
 /** Loads initial tree data into the given socket. */

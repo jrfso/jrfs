@@ -375,7 +375,7 @@ export interface FsCommands {
   "fs.write": CommandType<
     | {
         to: string;
-        data?: unknown;
+        data: unknown;
         ctime?: number;
         patch?: never;
       }

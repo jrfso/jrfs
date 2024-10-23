@@ -95,9 +95,7 @@ export abstract class Driver {
 
   abstract exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
-    ...params: undefined extends CommandParams<CN>
-      ? [params?: CommandParams<CN>]
-      : [params: CommandParams<CN>]
+    params: CommandParams<CN>,
   ): Promise<CommandResult<CN>>;
 }
 
