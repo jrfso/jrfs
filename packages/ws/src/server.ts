@@ -143,6 +143,8 @@ function handleRequest(
   return true;
 }
 
+// TODO: Remove handleWrite after FsDriver performs the patch, not Repository.
+
 async function handleWrite(
   repo: Repository<any>,
   params: CommandParams<"fs.write">,

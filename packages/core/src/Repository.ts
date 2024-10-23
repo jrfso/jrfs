@@ -30,7 +30,7 @@ import {
   createShortId as defaultCreateShortId,
 } from "@/helpers";
 
-// TODO: A dynamic COMMAND system, so websocket messages can simply relay those.
+// TODO: Move more logic from FsCommander into corresponding FsDriver handler.
 
 // TODO: Add a method to register a view.
 // - A file type to match or other filter must be provided.
@@ -133,7 +133,7 @@ export class Repository<FT> {
 
   // CONSIDER: Do more or less validation before passing FS actions to driver?
 
-  #fs: FsTransactions<FT> = Object.freeze({
+  #fs: FsCommander<FT> = Object.freeze({
     add: async (
       to: string,
       params: {
@@ -356,7 +356,7 @@ export class Repository<FT> {
     },
   });
 
-  get fs(): FsTransactions<FT> {
+  get fs(): FsCommander<FT> {
     return this.#fs;
   }
   // #endregion
@@ -468,7 +468,7 @@ export function registerPlugin<N extends PluginName>(
 }
 // #endregion
 
-export interface FsTransactions<FT> {
+export interface FsCommander<FT> {
   add(
     to: string,
     params?: {
