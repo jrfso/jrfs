@@ -1,9 +1,6 @@
 import { WebSocket, WebSocketServer } from "ws";
 import {
   type CommandName,
-  type CommandParams,
-  type CommandResult,
-  // type Entry,
   type FileTree,
   type FileTreeChange,
   type Repository,

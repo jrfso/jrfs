@@ -373,18 +373,12 @@ export interface FsCommands {
   "fs.move": CommandType<{ from: string; to: string }, FsEntryIdResult>;
   "fs.remove": CommandType<{ from: string }, FsEntryIdResult>;
   "fs.write": CommandType<
-    | {
-        to: string;
-        data: unknown;
-        ctime?: number;
-        patch?: never;
-      }
-    | {
-        to: string;
-        data?: unknown;
-        ctime: number;
-        patch: MutativePatches;
-      },
+    {
+      to: string;
+      ctime: number;
+      data?: unknown;
+      patch?: MutativePatches;
+    },
     FsEntryIdResult
   >;
 }

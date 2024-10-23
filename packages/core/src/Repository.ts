@@ -28,8 +28,6 @@ import {
   createShortId as defaultCreateShortId,
 } from "@/helpers";
 
-// TODO: Move more logic from FsCommander into corresponding FsDriver handler.
-
 // TODO: Add a method to register a view.
 // - A file type to match or other filter must be provided.
 // - A function to run after (a batch?) of tree/data changes is needed.
@@ -313,6 +311,7 @@ export class Repository<FT> {
       const { id } = await this.#driver.exec("fs.write", {
         to,
         data: writerOrData,
+        ctime: toEntry.ctime,
       });
       return files.get(id);
     },
