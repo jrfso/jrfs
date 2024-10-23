@@ -4,7 +4,7 @@ import {
   registerPlugin,
 } from "@jrfs/core";
 
-export interface GitCommander {
+export interface GitPlugin {
   add(files?: string[]): Promise<any>;
   commit(message: string): Promise<any>;
   push(force?: boolean): Promise<any>;
@@ -26,7 +26,7 @@ declare module "@jrfs/core" {
   }
 
   interface Repository<FT> {
-    get git(): GitCommander;
+    get git(): GitPlugin;
   }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 }
@@ -46,7 +46,7 @@ export default registerPlugin("git", function registerGitPlugin(params) {
       console.log("[GIT] Push...");
       return this.exec("git.push", { force });
     },
-  } satisfies GitCommander);
+  } satisfies GitPlugin);
   Object.defineProperty(this, "git", {
     enumerable: true,
     value: commands,

@@ -129,7 +129,7 @@ export class Repository<FT> {
 
   // CONSIDER: Do more or less validation before passing FS actions to driver?
 
-  #fs: FsCommander<FT> = Object.freeze({
+  #fs: FsHelpers<FT> = Object.freeze({
     add: async (
       to: string,
       params: {
@@ -317,7 +317,7 @@ export class Repository<FT> {
     },
   });
 
-  get fs(): FsCommander<FT> {
+  get fs(): FsHelpers<FT> {
     return this.#fs;
   }
   // #endregion
@@ -429,7 +429,7 @@ export function registerPlugin<N extends PluginName>(
 }
 // #endregion
 
-export interface FsCommander<FT> {
+export interface FsHelpers<FT> {
   add(
     to: string,
     params?: {
