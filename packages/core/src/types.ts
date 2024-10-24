@@ -369,10 +369,10 @@ export type RunCommand<CN extends CommandName | Omit<string, keyof Commands>> =
   ) => Promise<CommandResult<CN>>;
 
 export interface RunCommandProps {
-  // CONSIDER: Add config, driver, [plugin?]...
+  // CONSIDER: Add repo, driver, [plugin?]...
+  config: RepositoryConfig;
   files: WritableFileTree;
   fileTypes: FileTypeProvider<any>;
-  hostPath: (entryPath: string) => string;
 }
 /** Helper to define a command runner. */
 export function command<CN extends CommandName | Omit<string, keyof Commands>>(

@@ -184,7 +184,7 @@ export class Repository<FT> {
         const { entry } = files.entry(parent);
         to = files.path(entry) + "/" + to;
       }
-      const { id } = await this.#driver.exec(
+      const { id } = await this.exec(
         "fs.add",
         "data" in params && typeof data !== "undefined"
           ? {
@@ -223,7 +223,7 @@ export class Repository<FT> {
         // NOTE: All paths are relative to Repository root, so no leading "/".
         to = fromEntry.name;
       }
-      const { id } = await this.#driver.exec("fs.copy", {
+      const { id } = await this.exec("fs.copy", {
         from,
         to,
       });
@@ -246,7 +246,7 @@ export class Repository<FT> {
         };
       }
       // Get from driver.
-      const { id, data } = await this.#driver.exec("fs.get", { from });
+      const { id, data } = await this.exec("fs.get", { from });
       return {
         entry: files.get(id),
         data: data as Readonly<D>,
@@ -278,7 +278,7 @@ export class Repository<FT> {
         // NOTE: All paths are relative to Repository root, so no leading "/".
         to = fromEntry.name;
       }
-      const { id } = await this.#driver.exec("fs.move", {
+      const { id } = await this.exec("fs.move", {
         from,
         to,
       });
@@ -288,7 +288,7 @@ export class Repository<FT> {
     remove: async (entry: EntryOrPath): Promise<Entry> => {
       const { files } = this;
       const { path: from, entry: target } = files.entry(entry);
-      const { id } = await this.#driver.exec("fs.remove", {
+      const { id } = await this.exec("fs.remove", {
         from,
       });
       if (id !== target.id)
@@ -306,7 +306,7 @@ export class Repository<FT> {
       } else {
         to = files.parentPath(fromEntry) + "/" + name;
       }
-      const { id } = await this.#driver.exec("fs.move", {
+      const { id } = await this.exec("fs.move", {
         from,
         to,
       });
@@ -339,7 +339,7 @@ export class Repository<FT> {
           // No change.
           return toEntry;
         }
-        const { id } = await this.#driver.exec("fs.write", {
+        const { id } = await this.exec("fs.write", {
           to,
           data,
           ctime: toEntry.ctime,
@@ -347,7 +347,7 @@ export class Repository<FT> {
         });
         return files.get(id);
       }
-      const { id } = await this.#driver.exec("fs.write", {
+      const { id } = await this.exec("fs.write", {
         to,
         data: writerOrData,
         ctime: toEntry.ctime,
@@ -400,7 +400,7 @@ export class Repository<FT> {
       ? [CommandParams<CN>?]
       : [CommandParams<CN>]
   ): Promise<CommandResult<CN>> {
-    return this.#driver.exec(commandName, params!);
+    return this.#driver.exec(commandName, params!, this.#config);
   }
   // #endregion
 }

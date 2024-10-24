@@ -11,13 +11,15 @@ import {
   type DriverProps,
   // type EntryOfId,
   type NodeEntry,
+  type RepositoryConfig,
   Driver,
   applyPatch,
   command,
   registerDriver,
 } from "@jrfs/core";
 // Local
-import { FsConfig, FsIndexData, FsIndexDefaultFileExtension } from "./types";
+import { FsConfig, FsIndexData, FsIndexDefaultFileExtension } from "@/types";
+import { hostDataPath } from "@/helpers";
 
 declare module "@jrfs/core" {
   interface DriverTypes {
@@ -222,10 +224,6 @@ export class FsDriver extends Driver {
   // #endregion
   // #region -- Core
 
-  /** Returns the full native path to the given relative node path. */
-  #fullPath = (nodePath: string) => {
-    return Path.join(this.#dataPath, nodePath);
-  };
   /** Creates a transaction to prevent overlapped calls on the same driver. */
   #transaction<T>(cb: TransactionCallback<T>): Promise<T> {
     let onReject: (reason?: any) => void;
@@ -268,6 +266,7 @@ export class FsDriver extends Driver {
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
     params: CommandParams<CN>,
+    config: RepositoryConfig,
   ): Promise<CommandResult<CN>> {
     console.log(`[FS] Exec ${commandName}`, params);
     return this.#transaction(async () => {
@@ -277,9 +276,9 @@ export class FsDriver extends Driver {
       }
       return cmd(
         {
+          config,
           files: this.files,
           fileTypes: this.fileTypes,
-          hostPath: this.#fullPath,
         },
         params,
       );
@@ -377,11 +376,11 @@ interface Transactions {
 // #endregion
 
 const fsCommands = [
-  command("fs.add", async function fsAdd({ files, hostPath }, params) {
+  command("fs.add", async function fsAdd({ config, files }, params) {
     const { to, data } = params;
     // CONSIDER: Do we need isDir/isFile signaling for the caller here?
     const isDir = !("data" in params);
-    const toPath = hostPath(to);
+    const toPath = hostDataPath(config, to);
     console.log("[FS] add", to);
     if (isDir) {
       // Add directory
@@ -397,10 +396,10 @@ const fsCommands = [
     const target = files.add(to, isDir ? { stats } : { data, stats });
     return { id: target.id };
   }),
-  command("fs.copy", async function fsCopy({ files, hostPath }, { from, to }) {
+  command("fs.copy", async function fsCopy({ config, files }, { from, to }) {
     const { entry: fromEntry } = files.entry(from);
-    const fromPath = hostPath(from);
-    const toPath = hostPath(to);
+    const fromPath = hostDataPath(config, from);
+    const toPath = hostDataPath(config, to);
     console.log("[FS] cp", from, to);
     await FSP.cp(fromPath, toPath, {
       preserveTimestamps: true,
@@ -410,9 +409,9 @@ const fsCommands = [
     const target = files.copy(fromEntry, to, { stats });
     return { id: target.id };
   }),
-  command("fs.get", async function fsGet({ files, hostPath }, { from }) {
+  command("fs.get", async function fsGet({ config, files }, { from }) {
     const { entry: fromEntry } = files.entry(from);
-    const fromPath = hostPath(from);
+    const fromPath = hostDataPath(config, from);
     const stats = await FSP.stat(fromPath);
     if (fromEntry.ctime !== stats.ctime.getTime()) {
       console.warn(`Error: The ctime in memory != fs "${fromPath}".`);
@@ -428,10 +427,10 @@ const fsCommands = [
       data: jsonData,
     };
   }),
-  command("fs.move", async function fsMove({ files, hostPath }, { from, to }) {
+  command("fs.move", async function fsMove({ config, files }, { from, to }) {
     const { entry: fromEntry } = files.entry(from);
-    const fromPath = hostPath(from);
-    const toPath = hostPath(to);
+    const fromPath = hostDataPath(config, from);
+    const toPath = hostDataPath(config, to);
     const toPathParent = Path.dirname(toPath);
     console.log("[FS] mv", from, to);
     await FSP.mkdir(toPathParent, { recursive: true });
@@ -440,9 +439,9 @@ const fsCommands = [
     const target = files.move(fromEntry, to, { stats });
     return { id: target.id };
   }),
-  command("fs.remove", async function fsRemove({ files, hostPath }, { from }) {
+  command("fs.remove", async function fsRemove({ config, files }, { from }) {
     const { entry: fromEntry } = files.entry(from);
-    const fullPath = hostPath(from);
+    const fullPath = hostDataPath(config, from);
     console.log("[FS] rm", from);
     await FSP.rm(fullPath, { recursive: true });
     const target = files.remove(fromEntry);
@@ -450,7 +449,7 @@ const fsCommands = [
   }),
   command(
     "fs.write",
-    async function fsWrite({ files, hostPath }, { to, data, ctime, patch }) {
+    async function fsWrite({ config, files }, { to, data, ctime, patch }) {
       const { entry: toEntry, data: origData } = files.fileEntry(to);
       // Apply patch?
       if (patch && typeof data === "undefined") {
@@ -476,7 +475,7 @@ const fsCommands = [
       }
       // Write data
       const json = JSON.stringify(data, undefined, 2);
-      const fullPath = hostPath(to);
+      const fullPath = hostDataPath(config, to);
       console.log("[FS] write", to);
       await FSP.writeFile(fullPath, json);
       const stats = await FSP.stat(fullPath);

@@ -89,6 +89,7 @@ export abstract class Driver {
   abstract exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
     params: CommandParams<CN>,
+    config: Readonly<RepositoryConfig>,
   ): Promise<CommandResult<CN>>;
 }
 
