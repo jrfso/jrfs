@@ -4,10 +4,11 @@ import type {
   CommandParams,
   CommandRegistry,
   CommandResult,
-  FileTree,
   FileTypeProvider,
+  RepositoryConfig,
   RunCommand,
-} from "@/index";
+} from "@/types";
+import type { FileTree } from "@/FileTree";
 import { type CreateShortIdFunction } from "@/helpers";
 import { INTERNAL } from "@/internal/types";
 import { WritableFileTree } from "@/WritableFileTree";
@@ -44,10 +45,6 @@ export abstract class Driver {
   get opened() {
     return this.#opened;
   }
-
-  get rootPath() {
-    return "";
-  }
   // #endregion
   // #region -- Lifecycle
 
@@ -67,15 +64,16 @@ export abstract class Driver {
   /** Handles closing the repo. */
   protected abstract onClose(): Promise<void>;
   /** Handles opening the repo. */
-  protected abstract onOpen(): Promise<void>;
+  protected abstract onOpen(props: DriverOpenProps): Promise<void>;
 
-  async open(files: FileTree) {
+  async open(props: DriverOpenProps) {
+    const { files } = props;
     const opened = this.#opened;
     if (opened) {
       throw new Error(`Driver has already opened ${this}`);
     }
     this.#files = WritableFileTree[INTERNAL].create(files, this.#createShortId);
-    await this.onOpen();
+    await this.onOpen(props);
     // Save state.
     this.#opened = true;
   }
@@ -97,8 +95,14 @@ export abstract class Driver {
 /** Callback to create a driver. */
 export type DriverFactory = (props: DriverProps, options: any) => Driver;
 
+export interface DriverOpenProps {
+  config: RepositoryConfig;
+  files: FileTree;
+}
+
 export interface DriverProps {
   commands: CommandRegistry;
+  config: RepositoryConfig;
   createShortId: CreateShortIdFunction;
   fileTypes: FileTypeProvider<any>;
 }

@@ -49,6 +49,8 @@ export class FsDriver extends Driver {
   /** Full root file-system path. */
   #rootPath = "";
 
+  // TODO: Rename rootPath -> dataPath...
+
   #transactions: Transactions = { queue: [] };
 
   constructor(
@@ -58,19 +60,25 @@ export class FsDriver extends Driver {
     const { config, configFile, rootPath, indexFile } =
       openConfig(optionsOrConfigPath);
     super(props);
+
+    const { config: repoConfig } = props;
+    repoConfig.host.dataPath = rootPath;
+
     // Set object name for the default `toString` implementation.
     (this as any)[Symbol.toStringTag] = `FsDriver("${rootPath}")`;
+
     this.#rootChildDepth = rootPath.split(Path.sep).length;
     this.#rootPath = rootPath;
     this.#config = config;
     this.#configFile = configFile;
+
     if (indexFile) {
       this.#indexFile = indexFile;
     }
     this.commands.register(fsCommands);
   }
 
-  override get rootPath() {
+  get rootPath() {
     return this.#rootPath;
   }
 

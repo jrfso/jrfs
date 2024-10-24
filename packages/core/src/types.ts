@@ -274,10 +274,16 @@ export interface FileTypeProvider<FT> {
 
 /** {@link Repository} plugin implementation function. */
 export interface Plugin<P = unknown> {
-  (this: Repository<any>, params: P | undefined): void;
+  (props: PluginProps, params: P | undefined): void;
 }
 /** Plugin name of a plugin registered in {@link Plugins} */
 export type PluginName = keyof Plugins & string;
+/**  */
+export interface PluginProps {
+  readonly commands: CommandRegistry;
+  readonly config: RepositoryConfig;
+  readonly repo: Repository<any>;
+}
 /** Declares global {@link Plugin}s. `{"myPlugin":{params?,data}}` */
 export interface Plugins {
   // e.g. myPlugin: PluginType<{foo?:"bar"|"baz"}>;
@@ -407,4 +413,16 @@ export interface FsEntryIdResult {
   /** Id of the entry affected by the command. */
   id: string;
 }
+// #endregion
+// #region -- Repository: Configuration
+
+export interface RepositoryConfig {
+  host: RepositoryHostConfig;
+}
+
+export interface RepositoryHostConfig {
+  dataPath: string;
+  // gitPath: string;
+}
+
 // #endregion

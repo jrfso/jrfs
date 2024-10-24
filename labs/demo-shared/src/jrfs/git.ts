@@ -1,8 +1,4 @@
-import {
-  CommandType,
-  PluginType,
-  registerPlugin,
-} from "@jrfs/core";
+import { CommandType, PluginType, registerPlugin } from "@jrfs/core";
 
 export interface GitPlugin {
   add(files?: string[]): Promise<any>;
@@ -28,28 +24,34 @@ declare module "@jrfs/core" {
   interface Repository<FT> {
     get git(): GitPlugin;
   }
+
+  interface RepositoryHostConfig {
+    gitPath: string;
+  }
   /* eslint-enable @typescript-eslint/no-unused-vars */
 }
 
-export default registerPlugin("git", function registerGitPlugin(params) {
-  console.log("[GIT] Registering shared commands...");
-  const commands = Object.freeze({
+export default registerPlugin("git", function registerGitPlugin({ repo }) {
+  console.log("[GIT] Registering plugin interface...");
+
+  const plugin = Object.freeze({
     add: async (files?) => {
       console.log("[GIT] Add...");
-      return this.exec("git.add", { files });
+      return repo.exec("git.add", { files });
     },
     commit: async (message) => {
       console.log("[GIT] Commit...");
-      return this.exec("git.commit", { message });
+      return repo.exec("git.commit", { message });
     },
     push: async (force?) => {
       console.log("[GIT] Push...");
-      return this.exec("git.push", { force });
+      return repo.exec("git.push", { force });
     },
   } satisfies GitPlugin);
-  Object.defineProperty(this, "git", {
+
+  Object.defineProperty(repo, "git", {
     enumerable: true,
-    value: commands,
+    value: plugin,
     writable: false,
   });
 });

@@ -17,8 +17,11 @@ const gitCommands = [
   }),
 ];
 
-export default registerPlugin("git", function registerGitPlugin(params) {
-  registerGitPluginShared.call(this, params);
+export default registerPlugin("git", function registerGitPlugin(props, params) {
+  registerGitPluginShared(props, params);
+  const { config, commands /*,repo*/ } = props;
   console.log("[GIT] Registering host command runners...");
-  this.commands.register(gitCommands);
+  commands.register(gitCommands);
+  // TODO: Find git path from config.host.dataPath...
+  config.host.gitPath = "/a/b/c";
 });

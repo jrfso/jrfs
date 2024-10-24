@@ -138,3 +138,55 @@ export function deepFreeze<T = unknown>(
   }
   return obj;
 }
+/**
+ * Returns a writable clone of a deeply frozen object. See {@link deepFreeze}.
+ */
+export function unfreezeDeepClone<T = unknown>(obj: Readonly<T>): T {
+  let val: any;
+  //
+  // Unfreeze self
+  //
+  // - Check if the root obj is frozen before unfreezing it.
+  // - Don't stop recursing unfrozen obj, descend into frozen props.
+  // - Early exit for unfrozen non-object/array types.
+  //
+  const frozen = Object.isFrozen(obj);
+  if (frozen) {
+    if (obj instanceof Map) {
+      val = new Map(obj);
+    } else if (obj instanceof Set) {
+      val = new Set(obj);
+    } else if (Array.isArray(obj)) {
+      val = [...val];
+    } else if (typeof obj === "object") {
+      val = { ...obj };
+    }
+  } else if (typeof obj !== "object") {
+    // Early exit for frozen non-object/array types.
+    return obj;
+  }
+  // Unfreeze props
+  //
+  // - Use for...in instead of Object.getOwnPropertyNames(obj).forEach(name=>
+  // for a ~25% performance increase. No security needed for Object prototype
+  // pollution since we're not setting properties with untrusted data here.
+  //
+  // - If the parent `obj` is `frozen`, descend recursively away! Otherwise,
+  // check if the prop itself is frozen first. This is a good compromise
+  // between descending infinitely into frozen objects vs not descending at all.
+  // If we hit a unfrozen obj, we'll check it's direct children and stop if
+  // they're all unfrozen already.
+  //
+  for (const name in val) {
+    const prop = val[name];
+    const type = typeof prop;
+    if (
+      // (type === "object" || (optFreezeFunctions && type === "function")) &&
+      type === "object" &&
+      (frozen || Object.isFrozen(prop))
+    ) {
+      val[name] = unfreezeDeepClone(prop /*, optFreezeFunctions*/);
+    }
+  }
+  return val;
+}

@@ -12,8 +12,10 @@ import {
   type NodeInfo,
   type Plugin,
   type PluginName,
+  type PluginProps,
   type Plugins,
   type PluginsData,
+  type RepositoryConfig,
   type RunCommand,
   isDirectoryId,
 } from "@/types";
@@ -28,6 +30,8 @@ import {
   type CreateShortIdFunction,
   createPatch,
   createShortId as defaultCreateShortId,
+  deepFreeze,
+  unfreezeDeepClone,
 } from "@/helpers";
 
 // TODO: Add a method to register a view.
@@ -50,6 +54,7 @@ import {
  */
 export class Repository<FT> {
   #commands: CommandRegistry;
+  #config: Readonly<RepositoryConfig>;
   #driver: Driver;
   #files: FileTree;
   #fileTypes: FileTypeProvider<FT>;
@@ -65,6 +70,8 @@ export class Repository<FT> {
       createShortId = defaultCreateShortId,
       plugins: pluginParams = {},
     } = options;
+    // Initialize config.
+    const config = defaultRepositoryConfig();
     // Initialize commands.
     const commands = createCommandRegistry();
     this.#commands = commands;
@@ -74,33 +81,46 @@ export class Repository<FT> {
     const driver = driverFactory(
       {
         commands,
+        config,
         createShortId,
         fileTypes,
       },
       driverOptions,
     );
-    const files = new FileTree();
+    this.#config = config; // Set writable config until after plugins!
     this.#driver = driver;
-    this.#files = files;
+    this.#files = new FileTree();
     this.#fileTypes = fileTypes;
     // Set object name for the default `toString` implementation.
     (this as any)[Symbol.toStringTag] = `Repository(${driver})`;
     // Initialize plugins.
     this.#plugin = {};
     if (pluginParams) {
+      const pluginProps: PluginProps = {
+        commands,
+        config,
+        repo: this,
+      };
       for (const name in pluginParams) {
         const params = pluginParams[name as PluginName];
         if (params === false) continue;
         const plugin = registeredPlugins[name as PluginName] as Plugin;
-        if (plugin) plugin.call(this, params);
+        if (plugin) plugin(pluginProps, params);
       }
     }
+    // Lock config until open.
+    this.#config = deepFreeze(config);
   }
+
   // #region -- Props
 
   /** Command registry. */
   protected get commands() {
     return this.#commands;
+  }
+
+  get config() {
+    return this.#config;
   }
   /** The driver interface of the configured implementation. */
   get driver() {
@@ -129,7 +149,15 @@ export class Repository<FT> {
    * Loads all directories and files within the repo path.
    */
   async open() {
-    return this.#driver.open(this.#files);
+    const props = {
+      config: unfreezeDeepClone(this.#config),
+      files: this.#files,
+    };
+    await this.#driver.open(props);
+    // TODO: Figure out how plugins can also set config here... Ideas:
+    // - Call a different field of registeredPlugins.
+    // - Add a repo/driver open event that plugins can hook into.
+    this.#config = deepFreeze(props.config);
   }
   // #endregion
   // #region -- Diagnostics
@@ -393,6 +421,15 @@ export interface RepositoryOptions<FT> {
   createShortId?: CreateShortIdFunction;
 
   plugins?: { [P in PluginName]?: Plugins[P]["params"] };
+}
+// #endregion
+// #region -- Configuration
+function defaultRepositoryConfig(): RepositoryConfig {
+  return {
+    host: {
+      dataPath: "",
+    },
+  };
 }
 // #endregion
 // #region -- Drivers
