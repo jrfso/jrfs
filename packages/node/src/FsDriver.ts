@@ -42,14 +42,12 @@ export class FsDriver extends Driver {
   #config: FsConfig;
   /** Full path to the config file, if any. */
   #configFile: string | undefined;
+  /** Full file-system path to the data directory. */
+  #dataPath = "";
   /** Full path to an index file, if any. */
   #indexFile: string | undefined;
-  /** Depth of the root children in the absolute fs {@link #rootPath}. */
+  /** Depth of the root children in the absolute fs {@link #dataPath}. */
   #rootChildDepth = 0;
-  /** Full root file-system path. */
-  #rootPath = "";
-
-  // TODO: Rename rootPath -> dataPath...
 
   #transactions: Transactions = { queue: [] };
 
@@ -57,29 +55,24 @@ export class FsDriver extends Driver {
     props: DriverProps,
     optionsOrConfigPath: string | FsDriverOptions,
   ) {
-    const { config, configFile, rootPath, indexFile } =
+    const { config, configFile, dataPath, indexFile } =
       openConfig(optionsOrConfigPath);
     super(props);
 
     const { config: repoConfig } = props;
-    repoConfig.host.dataPath = rootPath;
+    repoConfig.host.dataPath = dataPath;
 
     // Set object name for the default `toString` implementation.
-    (this as any)[Symbol.toStringTag] = `FsDriver("${rootPath}")`;
+    (this as any)[Symbol.toStringTag] = `FsDriver("${dataPath}")`;
 
-    this.#rootChildDepth = rootPath.split(Path.sep).length;
-    this.#rootPath = rootPath;
     this.#config = config;
     this.#configFile = configFile;
-
+    this.#dataPath = dataPath;
     if (indexFile) {
       this.#indexFile = indexFile;
     }
+    this.#rootChildDepth = dataPath.split(Path.sep).length;
     this.commands.register(fsCommands);
-  }
-
-  get rootPath() {
-    return this.#rootPath;
   }
 
   // #region -- Lifecycle
@@ -107,10 +100,10 @@ export class FsDriver extends Driver {
   override async onOpen() {
     await this.files.build(async (files) => {
       const rootChildDepth = this.#rootChildDepth;
-      const rootPath = this.#rootPath;
+      const dataPath = this.#dataPath;
       const fileTypes = this.fileTypes;
       // Make sure the path exists and that it's a directory.
-      await FSP.mkdir(rootPath, { recursive: true }).catch(
+      await FSP.mkdir(dataPath, { recursive: true }).catch(
         (err: NodeJS.ErrnoException) => {
           if (err.code === "EEXIST") {
             throw new Error(`Expected FsDriver path to be a directory.`);
@@ -128,7 +121,7 @@ export class FsDriver extends Driver {
           // directories but only some files...
           "**/*",
           {
-            cwd: rootPath,
+            cwd: dataPath,
             dot: true,
             // ignore: ["node_modules/**"],
             stat: true,
@@ -231,7 +224,7 @@ export class FsDriver extends Driver {
 
   /** Returns the full native path to the given relative node path. */
   #fullPath = (nodePath: string) => {
-    return Path.join(this.#rootPath, nodePath);
+    return Path.join(this.#dataPath, nodePath);
   };
   /** Creates a transaction to prevent overlapped calls on the same driver. */
   #transaction<T>(cb: TransactionCallback<T>): Promise<T> {
@@ -323,7 +316,7 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
   const configDir = configFile ? Path.dirname(configFile) : undefined;
   // Get or create config.
   let config: FsConfig = {
-    root: "./data",
+    data: "./data",
     ...configDefaults,
   };
   let indexFile = config?.index;
@@ -346,9 +339,9 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
     indexFile = Path.resolve(indexFile);
   }
   // Get the main data path, ensure it exists.
-  const rootPath = configDir
-    ? Path.join(configDir, config.root)
-    : Path.resolve(config.root);
+  const dataPath = configDir
+    ? Path.join(configDir, config.data)
+    : Path.resolve(config.data);
   return {
     /** The loaded {@link FsConfig}. */
     config,
@@ -359,7 +352,7 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
     /** Full path to the configured index file, if any. */
     indexFile,
     /** Full path to the root data directory. */
-    rootPath,
+    dataPath,
   };
 }
 // #endregion
