@@ -34,7 +34,7 @@
     "clsx": "^2.1.1",
     "joi": "^17.13.3",
     "lodash.debounce": "^4.0.8",
-    "mutative": "1.0.11",
+    "mutative": "^1.0.11",
     "openapi-fetch": "^0.12.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

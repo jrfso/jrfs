@@ -35,12 +35,12 @@
     "watch": "node --watch-path=./src ../../scripts/build-esm.mjs lib --tsconfig tsconfig.prod.json"
   },
   "dependencies": {
-    "mutative": "1.0.11"
+    "mutative": "^1.0.11"
   },
   "devDependencies": {
     "dequal": "^2.0.3",
     "jsonpath-plus": "^9.0.0",
-    "mutative": "1.0.11",
+    "mutative": "^1.0.11",
     "object-hash": "^3.0.0"
   }
 }
