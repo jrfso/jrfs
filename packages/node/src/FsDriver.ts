@@ -482,11 +482,7 @@ const fsCommands = [
       const target = files.write(toEntry, {
         data,
         stats,
-        ...(ctime && patch
-          ? {
-              patch: { ctime, patches: patch },
-            }
-          : undefined),
+        patch,
       });
       return { id: target.id };
     },

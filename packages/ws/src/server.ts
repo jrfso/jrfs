@@ -36,7 +36,7 @@ export function createWsServer(params: {
   const clients = new WeakMap<WebSocket, ClientInfo>();
 
   function onTreeChange(changes: FileTreeChange) {
-    const { id, tx, op, added, changed, removed, patch } = changes;
+    const { id, tx, op, added, changed, removed, patched } = changes;
     console.log(`[WS] onTreeChange`, logFileTreeChange(changes));
     notifyAll("change", {
       id,
@@ -45,7 +45,7 @@ export function createWsServer(params: {
       a: added,
       c: changed,
       r: removed,
-      p: patch ? { c: patch.ctime, p: patch.patches } : undefined,
+      p: patched ? { c: patched.ctime, p: patched.patch } : undefined,
     });
   }
   let unsubFromTreeChanges: ReturnType<FileTree["onChange"]> | undefined;

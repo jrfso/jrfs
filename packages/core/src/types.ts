@@ -22,11 +22,11 @@ export interface FileTreeChange {
   /** All entry ids removed, in order of removal (child to parent). */
   removed?: string[];
 
-  patch?: {
-    /** Original file ctime, before patch. */
+  patched?: {
+    /** Original file ctime before patch. */
     ctime: number;
-    patches: MutativePatches;
-    undo?: MutativePatches;
+    /** Patch applied. */
+    patch: MutativePatches;
   };
 }
 /** Event data for {@link FileTree.onDataChange} */

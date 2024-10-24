@@ -90,7 +90,15 @@ export function createWebClient(opt: {
     }
     // Notice (event)
     if (msg.to === "change") {
-      const { id, op, tx, a: added, c: changed, r: removed, p: patch } = msg.of;
+      const {
+        id,
+        op,
+        tx,
+        a: added,
+        c: changed,
+        r: removed,
+        p: patched,
+      } = msg.of;
       console.log("[WS] onChange", id);
       tree.sync({
         id,
@@ -99,7 +107,7 @@ export function createWebClient(opt: {
         added,
         changed,
         removed,
-        patch: patch ? { ctime: patch.c, patches: patch.p } : undefined,
+        patched: patched ? { ctime: patched.c, patch: patched.p } : undefined,
       });
       printAfterChange();
     } else if (msg.to === "open") {

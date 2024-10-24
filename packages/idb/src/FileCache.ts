@@ -82,13 +82,13 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
   }
 
   async function onTreeChange(changes: FileTreeChange) {
-    const { id, /*tx,op,added,changed,*/ removed, patch } = changes;
+    const { id, /*tx,op,added,changed,*/ removed, patched } = changes;
     if (removed) {
       const ids = removed.filter(isFileId);
       if (ids.length < 1) return;
       console.log(`[IDB] onTreeChange (remove)`, ids);
       await db.delete(store, ids);
-    } else if (patch) {
+    } else if (patched) {
       // We only patch our cached item if the tree has no in-memory data for it.
       // This situation happens when the client reads and caches the data, then
       // refreshes the page.
@@ -107,7 +107,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
           console.log("Cache already updated", id, ctime);
           return;
         }
-        if (patch.ctime !== cached.ctime) {
+        if (patched.ctime !== cached.ctime) {
           await trx.store.delete(id);
           console.warn(
             `[IDB] Detected out of sync cache in [onTreeChange]->` +
@@ -116,7 +116,7 @@ export function createFileCache(options: IdbFileCacheOptions = {}) {
           return;
         }
         console.log(`[IDB] onTreeChange`, id, ctime, "(SET)");
-        const data = applyPatch(cached.data, patch.patches);
+        const data = applyPatch(cached.data, patched.patch);
         await trx.store.put({ ctime, data } satisfies FileCacheItem, id);
       }
     }

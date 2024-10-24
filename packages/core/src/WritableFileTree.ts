@@ -40,15 +40,9 @@ export interface FileTreeAddParams extends FileTreeChangeParams {
   data?: unknown;
 }
 
-// TODO: Reshape FileTreeWriteParams closer to FsCommands["fs.write"]["params"]
-
 export interface FileTreeWriteParams extends FileTreeChangeParams {
   data: unknown;
-  patch?: {
-    ctime: number;
-    patches: MutativePatches;
-    undo?: MutativePatches;
-  };
+  patch?: MutativePatches;
 }
 
 export class WritableFileTree extends FileTree {
@@ -620,7 +614,7 @@ export class WritableFileTree extends FileTree {
   }
   /** Applies a node entry change from another tree. */
   sync(change: FileTreeChange): void {
-    const { id: targetId, op, tx, added, changed, removed, patch } = change;
+    const { id: targetId, op, tx, added, changed, removed, patched } = change;
     // Set the tx BEFORE calling #base.onChange like other transactions.
     this.setTx(tx);
     if (op === "remove") {
@@ -644,10 +638,10 @@ export class WritableFileTree extends FileTree {
         for (const { id, ctime, name, pId } of changed) {
           const node = nodes.get(id)!;
           let dataProps: { data?: unknown } | undefined;
-          const isPatchTarget = patch && id === targetId;
+          const isPatchTarget = patched && id === targetId;
           if (isPatchTarget && hasFileData(node)) {
             // Patch this node's in-memory data if it's in sync.
-            if (patch.ctime !== node.entry.ctime) {
+            if (patched.ctime !== node.entry.ctime) {
               console.error(
                 `Removing out of sync data on "${id}@${ctime}:${name}"!`,
               );
@@ -655,7 +649,7 @@ export class WritableFileTree extends FileTree {
             } else {
               // Patch away since the original patch ctime matches our ctime.
               dataProps = {
-                data: applyPatch(node.data, patch.patches),
+                data: applyPatch(node.data, patched.patch),
               };
             }
           }
@@ -677,7 +671,7 @@ export class WritableFileTree extends FileTree {
         tx,
         added: additions,
         changed: changes,
-        patch,
+        patched,
       });
     }
   }
@@ -689,17 +683,26 @@ export class WritableFileTree extends FileTree {
       // TODO: Use a node getter that just does this automatically...
       throw new NodeNotFoundError(entry);
     }
+    /** ORIGINAL ctime */
+    const ctime = node.entry.ctime;
+
     node = this.#set(node, {
       data,
       entry: { ctime: getCtimeOption(stats) },
     });
+    const target = node.entry;
     const change: FileTreeChange = {
       op: "write",
-      id: node.entry.id,
-      changed: [node.entry],
-      patch,
+      id: target.id,
+      changed: [target],
       tx: this.#nextTx(),
     };
+    if (patch) {
+      change.patched = {
+        ctime,
+        patch,
+      };
+    }
 
     this.#base.onChange(change);
     return node.entry;
