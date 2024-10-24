@@ -7,11 +7,11 @@ import {
   type CommandName,
   type CommandParams,
   type CommandResult,
+  type ExecCommandProps,
   type NodeOptions,
   type DriverProps,
   // type EntryOfId,
   type NodeEntry,
-  type RepositoryConfig,
   Driver,
   applyPatch,
   command,
@@ -266,7 +266,7 @@ export class FsDriver extends Driver {
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
     params: CommandParams<CN>,
-    config: RepositoryConfig,
+    props: ExecCommandProps,
   ): Promise<CommandResult<CN>> {
     console.log(`[FS] Exec ${commandName}`, params);
     return this.#transaction(async () => {
@@ -276,7 +276,7 @@ export class FsDriver extends Driver {
       }
       return cmd(
         {
-          config,
+          config: props.config,
           files: this.files,
           fileTypes: this.fileTypes,
         },

@@ -400,7 +400,7 @@ export class Repository<FT> {
       ? [CommandParams<CN>?]
       : [CommandParams<CN>]
   ): Promise<CommandResult<CN>> {
-    return this.#driver.exec(commandName, params!, this.#config);
+    return this.#driver.exec(commandName, params!, { config: this.#config });
   }
   // #endregion
 }

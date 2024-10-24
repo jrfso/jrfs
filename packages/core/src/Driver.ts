@@ -4,6 +4,7 @@ import type {
   CommandParams,
   CommandRegistry,
   CommandResult,
+  ExecCommandProps,
   FileTypeProvider,
   RepositoryConfig,
   RunCommand,
@@ -89,7 +90,7 @@ export abstract class Driver {
   abstract exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
     params: CommandParams<CN>,
-    config: Readonly<RepositoryConfig>,
+    props: ExecCommandProps,
   ): Promise<CommandResult<CN>>;
 }
 

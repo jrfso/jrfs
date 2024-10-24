@@ -362,6 +362,10 @@ export type CommandType<
   ? { params?: Params; result: Result }
   : { params: Params; result: Result };
 
+export interface ExecCommandProps {
+  config: Readonly<RepositoryConfig>;
+}
+
 export type RunCommand<CN extends CommandName | Omit<string, keyof Commands>> =
   (
     props: RunCommandProps,
@@ -370,7 +374,7 @@ export type RunCommand<CN extends CommandName | Omit<string, keyof Commands>> =
 
 export interface RunCommandProps {
   // CONSIDER: Add repo, driver, [plugin?]...
-  config: RepositoryConfig;
+  config: Readonly<RepositoryConfig>;
   files: WritableFileTree;
   fileTypes: FileTypeProvider<any>;
 }
