@@ -4,6 +4,7 @@ import {
   type CommandResult,
   type DriverProps,
   type EntryOfId,
+  type ExecCommandProps,
   Driver,
   registerDriver,
 } from "@jrfs/core";
@@ -71,22 +72,37 @@ export class WebDriver extends Driver {
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
     params: CommandParams<CN>,
+    props: ExecCommandProps,
   ): Promise<CommandResult<CN>> {
     console.log(`[FS] Run ${commandName}`, params);
     if (commandName === "fs.get") {
-      return this.#getCached(params) as CommandResult<CN>;
+      return this.#getCached(params, props) as CommandResult<CN>;
     } else if (commandName === "fs.write") {
       if ("patch" in params && "data" in params) {
         // Don't send the data, just the patch.
         delete params.data;
       }
     }
-    // TODO: Else, get command registered in browser, to run right here.
-    return this.#client.exec(commandName, params);
+    // Try to get commands registered in browser, to run right here.
+    const cmd = this.commands.get(commandName);
+    if (cmd) {
+      return cmd(
+        {
+          config: props.config,
+          files: this.files,
+          fileTypes: this.fileTypes,
+        },
+        params,
+      );
+    }
+    return this.#client.exec(commandName, params, props);
   }
 
   /** Get file data.  */
-  async #getCached(params: CommandParams<"fs.get">): Promise<{
+  async #getCached(
+    params: CommandParams<"fs.get">,
+    props: ExecCommandProps,
+  ): Promise<{
     id: EntryOfId["id"];
     data: unknown;
   }> {
@@ -103,7 +119,7 @@ export class WebDriver extends Driver {
       }
     }
     // Get from server.
-    const { id, data } = await this.#client.exec("fs.get", params);
+    const { id, data } = await this.#client.exec("fs.get", params, props);
     const entry = files.getEntry(id);
     if (!entry) {
       throw new Error(`Entry not found "${id}".`);

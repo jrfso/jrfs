@@ -1,4 +1,5 @@
 import {
+  type ExecCommandProps,
   type CommandName,
   type CommandParams,
   type CommandResult,
@@ -26,6 +27,7 @@ export interface WebClient {
   exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
     params: CommandParams<CN>,
+    props: ExecCommandProps,
   ): Promise<CommandResult<CN>>;
 }
 
@@ -221,6 +223,7 @@ export function createWebClient(opt: {
     async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
       commandName: CN,
       params: CommandParams<CN>,
+      // props: ExecCommandProps,
     ): Promise<CommandResult<CN>> {
       return sendAndReceive(
         requestTo(commandName as CommandName, rx(), params),
