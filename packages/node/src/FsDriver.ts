@@ -20,6 +20,7 @@ import {
 // Local
 import { FsConfig, FsIndexData, FsIndexDefaultFileExtension } from "@/types";
 import { hostDataPath } from "@/helpers";
+import { createTransactions } from "@/transactions";
 
 declare module "@jrfs/core" {
   interface DriverTypes {
@@ -51,7 +52,7 @@ export class FsDriver extends Driver {
   /** Depth of the root children in the absolute fs {@link #dataPath}. */
   #rootChildDepth = 0;
 
-  #transactions: Transactions = { queue: [] };
+  #transactions = createTransactions();
 
   constructor(
     props: DriverProps,
@@ -222,46 +223,13 @@ export class FsDriver extends Driver {
     await FSP.writeFile(indexFile, json);
   }
   // #endregion
-  // #region -- Core
-
-  /** Creates a transaction to prevent overlapped calls on the same driver. */
-  #transaction<T>(cb: TransactionCallback<T>): Promise<T> {
-    let onReject: (reason?: any) => void;
-    let onResolve: (value: T | PromiseLike<T>) => void;
-    const completed = new Promise<T>((resolve, reject) => {
-      onResolve = resolve;
-      onReject = reject;
-    });
-    const transaction = async () => {
-      let err: any | undefined;
-      let result: any | undefined;
-      try {
-        result = cb();
-      } catch (ex) {
-        err = ex;
-      }
-      if (result && typeof result.then === "function") {
-        result.then(onResolve).catch(onReject);
-      } else if (err) {
-        onReject(err);
-      } else {
-        onResolve(result);
-      }
-    };
-    const transactions = this.#transactions;
-    transactions.queue.push(transaction);
-    if (!transactions.running) {
-      runTransactions(transactions);
-    }
-    return completed;
-  }
-  // #endregion
   // #region -- Diagnostics
 
   override toString() {
     return (this as any)[Symbol.toStringTag];
   }
   // #endregion
+  // #region -- Commands
 
   async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
     commandName: CN,
@@ -269,7 +237,7 @@ export class FsDriver extends Driver {
     props: ExecCommandProps,
   ): Promise<CommandResult<CN>> {
     console.log(`[FS] Exec ${commandName}`, params);
-    return this.#transaction(async () => {
+    return this.#transactions.add(async () => {
       const cmd = this.commands.get(commandName);
       if (!cmd) {
         throw new Error(`Command not found "${commandName}".`);
@@ -284,6 +252,7 @@ export class FsDriver extends Driver {
       );
     });
   }
+  // #endregion
 }
 // #region -- Diagnostics
 
@@ -353,25 +322,6 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
     /** Full path to the root data directory. */
     dataPath,
   };
-}
-// #endregion
-// #region -- Transactions
-
-async function runTransactions(transactions: Transactions) {
-  transactions.running = true;
-  const { queue } = transactions;
-  while (queue.length > 0) {
-    const transaction = queue.shift()!;
-    await transaction();
-  }
-  transactions.running = false;
-}
-
-type TransactionCallback<T = any> = () => Promise<T>;
-
-interface Transactions {
-  running?: boolean;
-  queue: TransactionCallback[];
 }
 // #endregion
 
