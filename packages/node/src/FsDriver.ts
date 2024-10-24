@@ -276,8 +276,6 @@ export class FsDriver extends Driver {
       }
       return cmd(
         {
-          // TODO: Get entries from caller...
-          entries: {},
           files: this.files,
           fileTypes: this.fileTypes,
           hostPath: this.#fullPath,

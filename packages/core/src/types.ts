@@ -363,9 +363,7 @@ export type RunCommand<CN extends CommandName | Omit<string, keyof Commands>> =
   ) => Promise<CommandResult<CN>>;
 
 export interface RunCommandProps {
-  // CONSIDER: Add config, driver, plugin...transaction?
-  /** Entries read and cached during run. */
-  entries: Partial<Record<"from" | "to", Entry>> & Record<string, Entry>;
+  // CONSIDER: Add config, driver, [plugin?]...
   files: WritableFileTree;
   fileTypes: FileTypeProvider<any>;
   hostPath: (entryPath: string) => string;
