@@ -2,6 +2,8 @@ import { command, registerPlugin } from "@jrfs/core";
 import registerGitPluginShared from "demo-shared/jrfs/git";
 // import { simpleGit } from "simple-git";
 
+// TODO: Implement some actual git commands...
+
 const gitCommands = [
   command("git.add", async function gitAdd(props, params) {
     console.log("Yooooo git.add!");
