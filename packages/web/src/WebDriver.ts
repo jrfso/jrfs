@@ -80,9 +80,8 @@ export class WebDriver extends Driver {
         // Don't send the data, just the patch.
         delete params.data;
       }
-    } else {
-      // TODO: Get cmd from registered commands, to run here...
     }
+    // TODO: Else, get command registered in browser, to run right here.
     return this.#client.exec(commandName, params);
   }
 

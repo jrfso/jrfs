@@ -120,9 +120,6 @@ function handleRequest(
   request: AnyRequest,
 ): boolean {
   const { to: commandName, of: commandParams, rx } = request;
-
-  // TODO: if (!commandName exists) return false;
-
   repo
     .exec(commandName, commandParams)
     .then((result) => {
