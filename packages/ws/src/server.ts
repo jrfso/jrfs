@@ -15,7 +15,7 @@ import type {
   Notifying,
   Responding,
   ServerMessage,
-} from "@jrfs/core/web/types";
+} from "@jrfs/core/web";
 
 interface ClientInfo {
   id: string;

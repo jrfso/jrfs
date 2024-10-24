@@ -10,7 +10,7 @@ import type {
   BaseRequest,
   MethodInfo,
   ServerMessage,
-} from "@jrfs/core/web/types";
+} from "@jrfs/core/web";
 
 const REQUEST_TIMEOUT_MS = 30000;
 

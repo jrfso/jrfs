@@ -4,7 +4,7 @@ import type {
   CommandResult,
   FileTreeChange,
   MutativePatches,
-} from "@/index";
+} from "@/types";
 
 // -- Notifications
 
