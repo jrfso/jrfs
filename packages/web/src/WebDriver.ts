@@ -1,10 +1,10 @@
 import {
+  type CommandName,
+  type CommandParams,
+  type CommandResult,
   type DriverProps,
-  type Entry,
-  type FileTree,
-  type FileTypes,
-  type TransactionOutParams,
-  type TransactionParams,
+  type EntryOfId,
+  type ExecCommandProps,
   Driver,
   registerDriver,
 } from "@jrfs/core";
@@ -54,11 +54,11 @@ export class WebDriver extends Driver {
     console.log("WebDriver onOpen");
     // Get project file listing from server...
     const client = this.#client;
-    await client.open(this.fileTree);
+    await client.open(this.files);
     // Cache file data?
     const cache = this.#cache;
     if (cache) {
-      await cache.open(this.fileTree);
+      await cache.open(this.files);
     }
   }
   // #endregion
@@ -68,81 +68,69 @@ export class WebDriver extends Driver {
     return (this as any)[Symbol.toStringTag];
   }
   // #endregion
-  // #region -- FS Actions
 
-  /** Add a directory or a file with data. */
-  async add(
-    params: TransactionParams["add"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return fsAction(this.fileTree, this.#client.add(params), out);
+  async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+    commandName: CN,
+    params: CommandParams<CN>,
+    props: ExecCommandProps,
+  ): Promise<CommandResult<CN>> {
+    console.log(`[FS] Run ${commandName}`, params);
+    if (commandName === "fs.get") {
+      return this.#getCached(params, props) as CommandResult<CN>;
+    } else if (commandName === "fs.write") {
+      if ("patch" in params && "data" in params) {
+        // Don't send the data, just the patch.
+        delete params.data;
+      }
+    }
+    // Try to get commands registered in browser, to run right here.
+    const cmd = this.commands.get(commandName);
+    if (cmd) {
+      return cmd(
+        {
+          config: props.config,
+          files: this.files,
+          fileTypes: this.fileTypes,
+        },
+        params,
+      );
+    }
+    return this.#client.exec(commandName, params, props);
   }
+
   /** Get file data.  */
-  async get(params: TransactionParams["get"]): Promise<{
-    entry: Entry;
+  async #getCached(
+    params: CommandParams<"fs.get">,
+    props: ExecCommandProps,
+  ): Promise<{
+    id: EntryOfId["id"];
     data: unknown;
   }> {
-    const { fileTree } = this;
+    const { files } = this;
+    const { entry: currEntry } = files.fileEntry(params.from);
     // Cached?
     const cache = this.#cache;
     if (cache) {
-      const entry = params.fromEntry;
-      const data = await cache.getData(entry);
+      const data = await cache.getData(currEntry);
       if (typeof data !== "undefined") {
-        return { entry, data };
+        // Update our in-memory data.
+        const entry = files.setData(currEntry, data);
+        return { id: entry.id, data };
       }
     }
     // Get from server.
-    const result = await this.#client.get(params);
-    const entry = fileTree.getEntry(result.id);
+    const { id, data } = await this.#client.exec("fs.get", params, props);
+    const entry = files.getEntry(id);
     if (!entry) {
-      throw new Error(`Entry not found "${result.id}".`);
+      throw new Error(`Entry not found "${id}".`);
     }
     // Update our in-memory data.
-    fileTree.setData(entry, result.data);
+    files.setData(entry, data);
     return {
-      entry,
-      data: result.data,
+      id,
+      data,
     };
   }
-  /** Move or rename a file/directory.  */
-  async copy(
-    params: TransactionParams["copy"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return fsAction(this.fileTree, this.#client.copy(params), out);
-  }
-  /** Move or rename a file/directory.  */
-  async move(
-    params: TransactionParams["move"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return fsAction(this.fileTree, this.#client.move(params), out);
-  }
-  /** Remove a file/directory. */
-  async remove(
-    params: TransactionParams["remove"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    const { fileTree } = this;
-    const entry = fileTree.findPathEntry(params.from)!;
-    const { id, tx } = await this.#client.remove(params);
-    if (out) {
-      out.tx = tx;
-    }
-    if (fileTree.getEntry(id)) {
-      throw new Error(`Entry not removed "${id}".`);
-    }
-    return entry;
-  }
-  /** Write to a file. */
-  async write(
-    params: TransactionParams["write"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return fsAction(this.fileTree, this.#client.write(params), out);
-  }
-  // #endregion
 }
 /** Configuration data for WebDriver. */
 export interface WebDriverConfig {
@@ -153,26 +141,10 @@ export interface WebDriverConfig {
 // Set object name for the default `toString` implementation.
 (WebDriver as any)[Symbol.toStringTag] = "WebDriver";
 
-function createWebDriver<FT extends FileTypes<FT>>(
+function createWebDriver(
   props: DriverProps,
   config: WebDriverConfig,
 ): WebDriver {
   return new WebDriver(props, config);
 }
 registerDriver("web", createWebDriver);
-
-async function fsAction(
-  tree: FileTree,
-  action: Promise<{ id: string; tx: number }>,
-  out?: TransactionOutParams,
-): Promise<Entry> {
-  const { id, tx } = await action;
-  if (out) {
-    out.tx = tx;
-  }
-  const entry = tree.getEntry(id);
-  if (!entry) {
-    throw new Error(`Entry not found "${id}".`);
-  }
-  return entry;
-}

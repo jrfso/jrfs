@@ -1,10 +1,9 @@
 import { WebSocket, WebSocketServer } from "ws";
 import {
-  type Entry,
+  type CommandName,
   type FileTree,
   type FileTreeChange,
   type Repository,
-  type TransactionOutParams,
   logFileTreeChange,
 } from "@jrfs/core";
 import type {
@@ -14,12 +13,9 @@ import type {
   Notice,
   NotificationParams,
   Notifying,
-  Requesting,
-  RequestParams,
   Responding,
   ServerMessage,
-  TransactionResult,
-} from "@jrfs/core/web/types";
+} from "@jrfs/core/web";
 
 interface ClientInfo {
   id: string;
@@ -40,7 +36,7 @@ export function createWsServer(params: {
   const clients = new WeakMap<WebSocket, ClientInfo>();
 
   function onTreeChange(changes: FileTreeChange) {
-    const { id, tx, op, added, changed, removed, patch } = changes;
+    const { id, tx, op, added, changed, removed, patched } = changes;
     console.log(`[WS] onTreeChange`, logFileTreeChange(changes));
     notifyAll("change", {
       id,
@@ -49,7 +45,7 @@ export function createWsServer(params: {
       a: added,
       c: changed,
       r: removed,
-      p: patch ? { c: patch.ctime, p: patch.patches } : undefined,
+      p: patched ? { c: patched.ctime, p: patched.patch } : undefined,
     });
   }
   let unsubFromTreeChanges: ReturnType<FileTree["onChange"]> | undefined;
@@ -59,7 +55,7 @@ export function createWsServer(params: {
     if (!id) return;
     const client: ClientInfo = { id };
     clients.set(socket, client);
-    loadClient(socket, repo.fs);
+    loadClient(socket, repo.files);
     socket.on("close", onClientClose);
     socket.on("message", onClientMsg);
   });
@@ -94,18 +90,19 @@ export function createWsServer(params: {
     const json = data.toString("utf8");
     const msg = JSON.parse(json) as AnyRequest;
 
-    // Execute action, send { rx, to: "ok", id, tx } response...
+    // Execute action, send { rx, to: "ok", id } response...
     if (!handleRequest(this, repo, msg)) {
       // TODO: Respond with invalid request error.
       // TODO: Better error logging.
       console.error("[WS] Invalid request.");
+      send(this, respondTo(msg.to, "error", msg.rx, "Invalid request."));
       return;
     }
   }
 
   return {
     start() {
-      unsubFromTreeChanges = repo.fs.onChange(onTreeChange);
+      unsubFromTreeChanges = repo.files.onChange(onTreeChange);
     },
     stop() {
       if (unsubFromTreeChanges) {
@@ -117,69 +114,23 @@ export function createWsServer(params: {
   };
 }
 
-type RequestHandler<P = unknown> = (
-  socket: WebSocket,
-  repo: Repository<any>,
-  rx: number,
-  params: P,
-) => void;
-
-type RequestHandlers = {
-  [K in Requesting]: RequestHandler<RequestParams[K]>;
-};
-
-const requestHandlers: RequestHandlers = {
-  add(socket, repo, rx, p) {
-    transaction("add", socket, rx, (out) =>
-      repo.fs.add(p.to, "data" in p ? { data: p.data } : {}, out),
-    );
-  },
-  copy(socket, repo, rx, p) {
-    transaction("copy", socket, rx, (out) => repo.fs.copy(p.from, p.to, out));
-  },
-  get(socket, repo, rx, p) {
-    const { from } = p;
-    try {
-      const entry = repo.fs.findPathEntry(from)!;
-      // TODO: Respond with a 404 if (!entry)...
-      const data = repo.fs.data(entry);
-      // CONSIDER: Should we compare client `ctime` to signal a change here?
-      send(socket, respondTo("get", "ok", rx, { id: entry.id, data }));
-    } catch (ex) {
-      send(socket, respondTo("get", "error", rx, "" + ex));
-    }
-  },
-  move(socket, repo, rx, p) {
-    transaction("move", socket, rx, (out) => repo.fs.move(p.from, p.to, out));
-  },
-  remove(socket, repo, rx, p) {
-    transaction("remove", socket, rx, (out) => repo.fs.remove(p.from, out));
-  },
-  async write(socket, repo, rx, p) {
-    transaction("write", socket, rx, async (out) => {
-      const { data, patch } = p;
-      if (patch) {
-        return repo.fs.patch(p.to, patch, out);
-      } else if ("data" in p && typeof data !== "undefined") {
-        return repo.fs.write(p.to, data!, out);
-      } else {
-        throw new Error(`[WS] Need data or patch to write to "${p.to}".`);
-      }
-    });
-  },
-};
-
 function handleRequest(
   socket: WebSocket,
   repo: Repository<any>,
   request: AnyRequest,
 ): boolean {
-  const handler = requestHandlers[request.to] as RequestHandler;
-  if (handler) {
-    handler(socket, repo, request.rx, request.of);
-    return true;
-  }
-  return false;
+  const { to: commandName, of: commandParams, rx } = request;
+  repo
+    .exec(commandName, commandParams)
+    .then((result) => {
+      const response = respondTo(commandName, "ok", rx, result);
+      send(socket, response);
+    })
+    .catch((ex) => {
+      const response = respondTo(commandName, "error", rx, "" + ex);
+      send(socket, response);
+    });
+  return true;
 }
 
 /** Loads initial tree data into the given socket. */
@@ -236,7 +187,7 @@ export function notifyOf<T extends Notifying, O = NotificationParams[T]>(
 }
 
 export function respondTo<
-  T extends Requesting,
+  T extends CommandName,
   R extends Responding = "ok",
   O = MethodInfo[T]["response"]["of"] | undefined,
 >(method: T, type: R, rx: number, content: O): BaseResponse<R, O> {
@@ -247,37 +198,7 @@ export function respondTo<
   };
 }
 
-export function respondTx(
-  rx: number,
-  content: TransactionResult,
-): BaseResponse<"ok", TransactionResult> {
-  return {
-    rx,
-    to: "ok",
-    of: content,
-  };
-}
-
 function send(socket: WebSocket, msg: ServerMessage) {
   const payload = JSON.stringify(msg);
   socket.send(payload, logSendError);
-}
-
-async function transaction(
-  op: FileTreeChange["op"],
-  socket: WebSocket,
-  rx: number,
-  run: (out: TransactionOutParams) => Promise<Entry>,
-): Promise<void> {
-  /** Object passed to get params out from run->repo->driver->writer. */
-  const out = { tx: 0 } as TransactionOutParams;
-  try {
-    const { id } = await run(out);
-    // CONSIDER: We could get different response types from run based on out...
-    const response = respondTo(op, "ok", rx, { id, tx: out.tx });
-    send(socket, response);
-  } catch (ex) {
-    const response = respondTo(op, "error", rx, "" + ex);
-    send(socket, response);
-  }
 }

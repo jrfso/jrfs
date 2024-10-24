@@ -1,19 +1,17 @@
 import {
-  type FileTypes,
-  type TransactionParams,
+  type ExecCommandProps,
+  type CommandName,
+  type CommandParams,
+  type CommandResult,
   type WritableFileTree,
-  // logFileTreeChange,
 } from "@jrfs/core";
 import type {
   AnyRequest,
   AnyResponse,
   BaseRequest,
-  DataResult,
   MethodInfo,
-  Requesting,
   ServerMessage,
-  TransactionResult,
-} from "@jrfs/core/web/types";
+} from "@jrfs/core/web";
 
 const REQUEST_TIMEOUT_MS = 30000;
 
@@ -22,25 +20,20 @@ type PromiseCallbacks = [(result?: any) => void, (reason?: any) => void];
 /** `[resolved, rejected]` */
 type PromiseResults = [any, any];
 
-export interface WebClient<FT extends FileTypes<FT> = any> {
+export interface WebClient {
   open(fileTree: WritableFileTree): Promise<void>;
   close(): Promise<void>;
 
-  add(params: WebClientParams["add"]): Promise<TransactionResult>;
-  get(params: WebClientParams["get"]): Promise<DataResult>;
-  copy(params: WebClientParams["copy"]): Promise<TransactionResult>;
-  move(params: WebClientParams["move"]): Promise<TransactionResult>;
-  remove(params: WebClientParams["remove"]): Promise<TransactionResult>;
-  write(params: WebClientParams["write"]): Promise<TransactionResult>;
+  exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+    commandName: CN,
+    params: CommandParams<CN>,
+    props: ExecCommandProps,
+  ): Promise<CommandResult<CN>>;
 }
 
 export interface WebClientError extends Error {
   code?: string;
   statusCode?: number;
-}
-
-export interface WebClientParams extends TransactionParams {
-  // Reserved for WebClient methods that aren't in TransactionParams...
 }
 
 function connect(ws: WebSocket) {
@@ -67,11 +60,11 @@ function connect(ws: WebSocket) {
   });
 }
 
-export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
+export function createWebClient(opt: {
   logging?: boolean;
   /** WebSocket URL e.g. `ws://localhost:40141/sockets/v1/t/repo/fs` */
   ws: string;
-}): WebClient<FT> {
+}): WebClient {
   let closeCalled = false;
   let ws: WebSocket | undefined;
   let tree = null! as WritableFileTree;
@@ -99,7 +92,15 @@ export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
     }
     // Notice (event)
     if (msg.to === "change") {
-      const { id, op, tx, a: added, c: changed, r: removed, p: patch } = msg.of;
+      const {
+        id,
+        op,
+        tx,
+        a: added,
+        c: changed,
+        r: removed,
+        p: patched,
+      } = msg.of;
       console.log("[WS] onChange", id);
       tree.sync({
         id,
@@ -108,7 +109,7 @@ export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
         added,
         changed,
         removed,
-        patch: patch ? { ctime: patch.c, patches: patch.p } : undefined,
+        patched: patched ? { ctime: patched.c, patch: patched.p } : undefined,
       });
       printAfterChange();
     } else if (msg.to === "open") {
@@ -187,7 +188,7 @@ export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
     });
   }
 
-  const client: WebClient<FT> = {
+  const client: WebClient = {
     async open(fileTree) {
       if (tree) return;
       tree = fileTree;
@@ -219,37 +220,47 @@ export function createWebClient<FT extends FileTypes<FT> = any>(opt: {
       tree = null!;
     },
 
-    async add(body) {
+    async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+      commandName: CN,
+      params: CommandParams<CN>,
+      // props: ExecCommandProps,
+    ): Promise<CommandResult<CN>> {
       return sendAndReceive(
-        requestTo("add", rx(), { to: body.to, data: body.data }),
+        requestTo(commandName as CommandName, rx(), params),
       );
     },
-    async copy(body) {
-      return sendAndReceive(
-        requestTo("copy", rx(), { from: body.from, to: body.to }),
-      );
-    },
-    async get(body) {
-      return sendAndReceive(requestTo("get", rx(), { from: body.from }));
-    },
-    async move(body) {
-      return sendAndReceive(
-        requestTo("move", rx(), { from: body.from, to: body.to }),
-      );
-    },
-    async remove(body) {
-      return sendAndReceive(requestTo("remove", rx(), { from: body.from }));
-    },
-    async write(body) {
-      let req: ReturnType<typeof requestTo<"write">>;
-      const { to, patch } = body;
-      if (patch) {
-        req = requestTo("write", rx(), { to, patch });
-      } else {
-        req = requestTo("write", rx(), { to, data: body.data });
-      }
-      return sendAndReceive(req);
-    },
+
+    // async add(body) {
+    //   return sendAndReceive(
+    //     requestTo("fs.add", rx(), { to: body.to, data: body.data }),
+    //   );
+    // },
+    // async copy(body) {
+    //   return sendAndReceive(
+    //     requestTo("fs.copy", rx(), { from: body.from, to: body.to }),
+    //   );
+    // },
+    // async get(body) {
+    //   return sendAndReceive(requestTo("fs.get", rx(), { from: body.from }));
+    // },
+    // async move(body) {
+    //   return sendAndReceive(
+    //     requestTo("fs.move", rx(), { from: body.from, to: body.to }),
+    //   );
+    // },
+    // async remove(body) {
+    //   return sendAndReceive(requestTo("fs.remove", rx(), { from: body.from }));
+    // },
+    // async write(body) {
+    //   let req: ReturnType<typeof requestTo<"fs.write">>;
+    //   const { to, patch } = body;
+    //   if (patch) {
+    //     req = requestTo("fs.write", rx(), { to, ctime: 0, patch });
+    //   } else {
+    //     req = requestTo("fs.write", rx(), { to, data: body.data });
+    //   }
+    //   return sendAndReceive(req);
+    // },
   };
   return client;
 }
@@ -258,7 +269,7 @@ export function isResponse(msg: ServerMessage): msg is AnyResponse {
   return "rx" in msg;
 }
 export function requestTo<
-  T extends Requesting,
+  T extends CommandName,
   O extends MethodInfo[T]["request"]["of"] = MethodInfo[T]["request"]["of"],
 >(method: T, rx: number, params: O): BaseRequest<T, O> {
   return {

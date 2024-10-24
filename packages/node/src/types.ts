@@ -5,8 +5,8 @@ export interface FsConfig {
    * default path is `"./${configFileName}.idx.json"`. Set `false` to disable.
    */
   index?: string | false;
-  /** A relative or absolute path to the root data directory. */
-  root: string;
+  /** A relative or absolute path to the data directory. */
+  data: string;
 }
 /** Structure containing an index of ids and state. */
 export interface FsIndexData {

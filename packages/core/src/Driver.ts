@@ -1,31 +1,42 @@
 // Local
 import type {
-  Entry,
-  FileTree,
+  CommandName,
+  CommandParams,
+  CommandRegistry,
+  CommandResult,
+  ExecCommandProps,
   FileTypeProvider,
-  MutativePatches,
-} from "@/index";
+  RepositoryConfig,
+  RunCommand,
+} from "@/types";
+import type { FileTree } from "@/FileTree";
 import { type CreateShortIdFunction } from "@/helpers";
 import { INTERNAL } from "@/internal/types";
 import { WritableFileTree } from "@/WritableFileTree";
 
 /** Base JRFS driver class. */
 export abstract class Driver {
+  #commands: CommandRegistry;
   #createShortId: CreateShortIdFunction;
-  #fileTree = null! as WritableFileTree;
+  #files = null! as WritableFileTree;
   #fileTypes: FileTypeProvider<any>;
   /** `true` if {@link open}, `false` if {@link close}d */
   #opened = false;
 
   constructor(props: DriverProps) {
+    this.#commands = props.commands;
     this.#createShortId = props.createShortId;
     this.#fileTypes = props.fileTypes;
   }
 
   // #region -- Props
 
-  protected get fileTree() {
-    return this.#fileTree;
+  protected get commands() {
+    return this.#commands;
+  }
+
+  protected get files() {
+    return this.#files;
   }
 
   protected get fileTypes() {
@@ -34,10 +45,6 @@ export abstract class Driver {
 
   get opened() {
     return this.#opened;
-  }
-
-  get rootPath() {
-    return "";
   }
   // #endregion
   // #region -- Lifecycle
@@ -53,128 +60,58 @@ export abstract class Driver {
     // Save state.
     await this.onClose();
     // Clear nodes.
-    this.#fileTree.reset();
+    this.#files.reset();
   }
   /** Handles closing the repo. */
   protected abstract onClose(): Promise<void>;
   /** Handles opening the repo. */
-  protected abstract onOpen(): Promise<void>;
+  protected abstract onOpen(props: DriverOpenProps): Promise<void>;
 
-  async open(fileTree: FileTree) {
+  async open(props: DriverOpenProps) {
+    const { files } = props;
     const opened = this.#opened;
     if (opened) {
       throw new Error(`Driver has already opened ${this}`);
     }
-    this.#fileTree = WritableFileTree[INTERNAL].create(
-      fileTree,
-      this.#createShortId,
-    );
-    await this.onOpen();
+    this.#files = WritableFileTree[INTERNAL].create(files, this.#createShortId);
+    await this.onOpen(props);
     // Save state.
     this.#opened = true;
   }
   // #endregion
-  // #region -- Actions
 
-  /** Add a directory or a file with data. */
-  abstract add(
-    params: TransactionParams["add"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
-  /** Copy a file/directory.  */
-  abstract copy(
-    params: TransactionParams["copy"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
-  /** Get a file's contents.  */
-  abstract get(
-    params: TransactionParams["get"] /*,  
-      out?: TransactionOutParams,
-    */,
-  ): Promise<{ entry: Entry; data: unknown }>;
-  /** Move or rename a file/directory.  */
-  abstract move(
-    params: TransactionParams["move"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
-  /** Remove a file/directory. */
-  abstract remove(
-    params: TransactionParams["remove"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
-  /** Write to a file. */
-  abstract write(
-    params: TransactionParams["write"],
-    out?: TransactionOutParams,
-  ): Promise<Entry>;
+  /** Gets a command runner if registered with this driver. */
+  command<CN extends CommandName | Omit<string, CommandName>>(
+    commandName: CN,
+  ): RunCommand<CN> | undefined {
+    return null!;
+  }
 
-  // #endregion
-}
-
-export interface TransactionOutParams {
-  /** Transaction number. */
-  tx: number;
-}
-
-/** Parameter types for mutation transactions. */
-export interface TransactionParams {
-  add: {
-    /** Path to file/directory. */
-    to: string;
-    /** File data. Required for adding a file. */
-    data?: unknown;
-  };
-  copy: {
-    /** Source path. */
-    from: string;
-
-    fromEntry: Entry;
-    /** Destination path. */
-    to: string;
-  };
-  get: {
-    /** Source path. */
-    from: string;
-    fromEntry: Entry;
-  };
-  move: {
-    /** Source path. */
-    from: string;
-
-    fromEntry: Entry;
-    /** Destination path. */
-    to: string;
-  };
-  remove: {
-    /** Path of file/directory to remove. */
-    from: string;
-
-    fromEntry: Entry;
-  };
-  write: {
-    to: string;
-    toEntry: Entry;
-    /** We always expect data so the driver can choose to use data or patch. */
-    data: unknown;
-    patch?: {
-      ctime: number;
-      patches: MutativePatches;
-      undo?: MutativePatches;
-    };
-  };
+  abstract exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+    commandName: CN,
+    params: CommandParams<CN>,
+    props: ExecCommandProps,
+  ): Promise<CommandResult<CN>>;
 }
 
 /** Callback to create a driver. */
 export type DriverFactory = (props: DriverProps, options: any) => Driver;
 
+export interface DriverOpenProps {
+  config: RepositoryConfig;
+  files: FileTree;
+}
+
 export interface DriverProps {
+  commands: CommandRegistry;
+  config: RepositoryConfig;
   createShortId: CreateShortIdFunction;
   fileTypes: FileTypeProvider<any>;
 }
 /**
  * Interface to declare a driver options types onto.
  * @example
- * declare module "jrfs" {
+ * declare module "@jrfs/core" {
  *   interface DriverTypeOptions {
  *     fs: FsDriverOptions;
  *   }

@@ -1,7 +1,7 @@
 {
   "name": "demo-shared",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.3.0",
   "description": "Code shared between demo-app and demo-server.",
   "license": "MIT",
   "type": "module",
@@ -33,13 +33,13 @@
     "nanoid": "^5.0.7"
   },
   "devDependencies": {
-    "@sinclair/typebox": "^0.33.7",
     "@jrfs/core": "*",
-    "@jrfs/typebox": "*"
+    "@jrfs/typebox": "*",
+    "@sinclair/typebox": "^0.33.7"
   },
   "peerDependencies": {
-    "@sinclair/typebox": "^0.33.7",
     "@jrfs/core": "*",
-    "@jrfs/typebox": "*"
+    "@jrfs/typebox": "*",
+    "@sinclair/typebox": "^0.33.7"
   }
 }

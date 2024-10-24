@@ -12,6 +12,7 @@ import {
   type NodeVisitResult,
   type NodeVisitor,
   isDirectoryId,
+  isFileId,
   logFileTreeChange,
 } from "@/types";
 import {
@@ -29,7 +30,6 @@ import {
   asNodeInfo,
   createRoot,
   isDirectoryNode,
-  isFileNode,
 } from "@/internal/types";
 
 export class FileTree {
@@ -455,6 +455,12 @@ export class FileTree {
   // #endregion
   // #region -- Get nodes
 
+  get(id: string): Entry {
+    const node = this.getNode(id);
+    if (!node) throw new NodeNotFoundError(id);
+    return node.entry;
+  }
+
   getNodeInfo(id: string): NodeInfo | undefined {
     const node = this.getNode(id);
     if (!node) {
@@ -533,28 +539,43 @@ export class FileTree {
   /**
    * Returns the path for the given node id and `undefined` if id not found.
    */
-  path(entry: EntryOrId): string | undefined {
+  path(entry: EntryOrId): string {
     const node = this.getNode(entry);
     if (!node) {
-      return undefined;
+      throw new NodeNotFoundError(entry);
     }
     return this.getNodePath(node);
+  }
+
+  parentPath(child: EntryOrId): string {
+    const childNode = this.getNode(child);
+    if (!childNode) {
+      throw new NodeNotFoundError(child);
+    }
+    const pId = childNode.entry.pId;
+    if (!pId) return "";
+    return this.path(pId);
   }
   // #endregion
   // #region -- Helpers
 
-  protected fileEntry(param: EntryOrPath): { path: string; node: FileNode } {
-    const { path, node } = this.entry(param);
-    if (!isFileNode(node)) {
+  fileEntry(param: EntryOrPath): {
+    path: string;
+    entry: Entry;
+    data?: unknown;
+  } {
+    const { path, entry } = this.entry(param);
+    if (!isFileId(entry.id)) {
       throw new Error(`Expected file node at "${path}".`);
     }
     return {
       path,
-      node,
+      entry,
+      data: this.data(entry),
     };
   }
   /** Entry parameter helper. */
-  protected entry(param: EntryOrPath) {
+  entry(param: EntryOrPath) {
     let path: string;
     let node: Node | undefined;
     if (typeof param === "string") {
@@ -572,11 +593,11 @@ export class FileTree {
     }
     return {
       path,
-      node,
+      entry: node.entry,
     };
   }
   /** Destination parameter helper. */
-  protected dest(param: EntryOrPath | null) {
+  dest(param: EntryOrPath | null) {
     let path: string | null = null;
     let node: Node | undefined;
     if (typeof param === "string") {
@@ -594,7 +615,7 @@ export class FileTree {
     }
     return {
       path,
-      node,
+      entry: node?.entry,
     };
   }
   // #endregion

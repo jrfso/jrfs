@@ -1,60 +1,24 @@
-import type { FileTreeChange, MutativePatches } from "@/index";
+import type {
+  CommandName,
+  CommandParams,
+  CommandResult,
+  FileTreeChange,
+  MutativePatches,
+} from "@/types";
 
 // -- Notifications
 
-/** Event types that can be notified. */
+/** Notification type names. */
 export type Notifying = keyof NotificationParams;
 
+/** Notification parameter type declarations. */
 export interface NotificationParams {
   change: ChangeNotification;
   close: undefined;
   open: OpenNotification;
 }
 
-// -- Requests + Responses
-
-/** Type of request. */
-export type Requesting = keyof RequestParams;
-
-export interface RequestParams {
-  /** Add */
-  add: { to: string; data?: unknown };
-  /** Copy */
-  copy: { from: string; to: string };
-  /** Get Json Data */
-  get: { from: string };
-  /** Move */
-  move: { from: string; to: string };
-  /** Remove */
-  remove: { from: string };
-  /** Write */
-  write:
-    | {
-        to: string;
-        data: unknown;
-        patch?: never;
-      }
-    | {
-        to: string;
-        data?: never;
-        patch: {
-          ctime: number;
-          patches: MutativePatches;
-          undo?: MutativePatches;
-        };
-      };
-}
-
-export interface ResponseValues {
-  add: TransactionResult;
-  copy: TransactionResult;
-  get: DataResult;
-  move: TransactionResult;
-  remove: TransactionResult;
-  write: TransactionResult;
-}
-
-// #region -- Message Bodies
+// -- Message Bodies
 
 /** A serialized {@link FileTreeChange} */
 export interface ChangeNotification {
@@ -64,7 +28,6 @@ export interface ChangeNotification {
   op: FileTreeChange["op"];
   /** The transaction number that caused the change. */
   tx: FileTreeChange["tx"];
-
   /** Added */
   a?: FileTreeChange["added"];
   /** Changed */
@@ -81,13 +44,7 @@ export interface ChangeNotification {
   };
 }
 
-export interface DataResult {
-  /** Entry id. */
-  id: string;
-  /** Complete data. */
-  data?: unknown;
-}
-
+/** Initial client notification. */
 export interface OpenNotification {
   /** Add entries. */
   a: NonNullable<FileTreeChange["added"]>;
@@ -97,17 +54,19 @@ export interface OpenNotification {
   tx: number;
 }
 
-export interface TransactionResult {
-  /** The completed transaction number. */
-  tx: number;
-  /** Id of the entry affected by the completed transaction. */
-  id: string;
-}
-// #endregion
-// #region -- Core
+// -- Core
 
 /** Any message type sent from `[Server]->[Client]`. */
 export type ServerMessage = AnyResponse | AnyNotification;
+
+// POSSIBLE: A type called AnyEvent, sent from client to server. e.g.
+// export type AnyEvent = EventParams[EventName]["message"]
+
+/** Any message type sent from `[Client]->[Server]` */
+export type ClientMessage = AnyRequest; // | AnyEvent;
+
+export type AnyRequest = MethodInfo[CommandName]["request"];
+export type AnyResponse = MethodInfo[CommandName]["response"];
 
 // #region -- Notifications
 
@@ -115,23 +74,27 @@ export type AnyNotification = Notifications[Notifying];
 
 /** Base notification message from `[Server]->[Client]`. */
 export interface Notice<T extends Notifying = Notifying, O = unknown> {
-  /** Type of event *to notice*. */
+  /** Notification type name to notify the client of. */
   to: T;
-  /** The event *of note*. */
+  /** Parameters of the notification. */
   of: O;
 }
-
+/** Notification type names mapped to message type. */
 export type Notifications = {
   [K in Notifying]: Notice<K, NotificationParams[K]>;
 };
 // #endregion
-// #region -- Methods `[Request] + [Response]`
+// #region -- Methods (derived from `Commands`)
 
-export type AnyRequest = MethodInfo[Requesting]["request"];
-export type AnyResponse = MethodInfo[Requesting]["response"];
-
+/** Command names mapped to request and response types. */
+export type MethodInfo = {
+  [K in CommandName]: {
+    request: BaseRequest<K, CommandParams<K>>;
+    response: BaseResponse<"ok", CommandResult<K>> | ErrorResponse;
+  };
+};
 /** Base request message from `[Client]->[Server]`. */
-export interface BaseRequest<T extends Requesting = Requesting, O = unknown> {
+export interface BaseRequest<T extends CommandName = CommandName, O = unknown> {
   /** Unique request number to respond with. */
   rx: number;
   /** Method name or other resource *to request*. */
@@ -143,23 +106,14 @@ export interface BaseRequest<T extends Requesting = Requesting, O = unknown> {
 export interface BaseResponse<T extends Responding = Responding, O = unknown> {
   /** Unique request number from the matching request. */
   rx: number;
-  /** The base archetype *to respond* with (e.g. success/fail/error). */
+  /** The archetype to respond with (e.g. success/fail/error). */
   to: T;
-  /** Contents *of the response*. */
+  /** Contents of the response. */
   of: O;
 }
-
+/** Common error response type. */
 export type ErrorResponse = BaseResponse<"error", string>;
-
-export type MethodInfo = {
-  [K in Requesting]: {
-    request: BaseRequest<K, RequestParams[K]>;
-    response: BaseResponse<"ok", ResponseValues[K]> | ErrorResponse;
-  };
-};
-
-/** Response archetype. */
+/** Response archetype *e.g. fail|succeed|etc*. */
 export type Responding = "ok" | "error";
 
-// #endregion
 // #endregion

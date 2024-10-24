@@ -21,12 +21,12 @@ describe.sequential("Starter lab", () => {
     repo = new ProjectRepo(REPO_PATH);
     await repo.open();
 
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Finding db models", async () => {
     console.log("FINDING db models...");
 
-    const nodes = await repo.fs.findTypes("db");
+    const nodes = await repo.findTypes("db");
     expect(nodes.length).toBeGreaterThanOrEqual(1);
 
     console.log("FOUND", nodes.length, "nodes");
@@ -50,21 +50,21 @@ describe.sequential("Starter lab", () => {
       },
     });
     console.log("ADDED FILE", addedFile.id, addedFile.name, addedFile.pId);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Moving directory", async () => {
     // await timeoutAsync(500);
     console.log("MOVING DIRECTORY...", addedDir.id);
     addedDir = await repo.fs.move(addedDir, "backend/things/tests");
     console.log("MOVED DIRECTORY", addedDir.id, "to", addedDir.pId);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Renaming directory", async () => {
     // await timeoutAsync(500);
     console.log("RENAMING DIRECTORY...", addedDir.id);
     addedDir = await repo.fs.rename(addedDir, "testing");
     console.log("RENAMED DIRECTORY...", addedDir.id, addedDir.name);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Writing file", async () => {
     // await timeoutAsync(500);
@@ -78,21 +78,21 @@ describe.sequential("Starter lab", () => {
       },
     );
     console.log("WROTE TO FILE", addedFile.name, addedFile.ctime);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Removing directory", async () => {
     console.log("REMOVING DIRECTORY...", addedDir.id, addedDir.name);
     addedDir = await repo.fs.remove("backend/things");
     console.log("REMOVED DIRECTORY...", addedDir.id, addedDir.name);
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Add and remove deep directory", async () => {
     console.log("TRY MKDIR...");
     const deepDir = await repo.fs.add("frontend/app1/foo/bar");
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
     console.log("REMOVING MKDIR...");
     await repo.fs.remove({ id: deepDir.pId! });
-    await repo.fs.printDirectory();
+    await repo.files.printDirectory();
   });
   test("Closing db", async () => {
     console.log("CLOSING repo", REPO_PATH);

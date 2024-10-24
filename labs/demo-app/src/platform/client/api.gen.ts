@@ -157,7 +157,6 @@ export interface components {
         };
         FsTxResult: {
             id: string;
-            tx: number;
         };
         FsAdd: {
             to: string;

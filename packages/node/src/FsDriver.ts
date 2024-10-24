@@ -4,18 +4,23 @@ import FSP from "node:fs/promises";
 // import * as JsonPatch from "fast-json-patch";
 import { glob } from "glob";
 import {
-  NodeOptions,
+  type CommandName,
+  type CommandParams,
+  type CommandResult,
+  type ExecCommandProps,
+  type NodeOptions,
+  type DriverProps,
+  // type EntryOfId,
+  type NodeEntry,
   Driver,
-  DriverProps,
-  Entry,
-  FileTypes,
-  NodeEntry,
-  TransactionOutParams,
-  TransactionParams,
+  applyPatch,
+  command,
   registerDriver,
 } from "@jrfs/core";
 // Local
-import { FsConfig, FsIndexData, FsIndexDefaultFileExtension } from "./types";
+import { FsConfig, FsIndexData, FsIndexDefaultFileExtension } from "@/types";
+import { hostDataPath } from "@/helpers";
+import { createTransactions } from "@/transactions";
 
 declare module "@jrfs/core" {
   interface DriverTypes {
@@ -33,43 +38,44 @@ export interface FsDriverOptions extends Partial<FsConfig> {
 }
 
 // CONSIDER: Save tx in order to sync between restarts! Apply it inside onOpen
-// in the fileTree.build() block by setting files.tx = txFromFile;
+// in the files.build() block by setting files.tx = txFromFile;
 
 export class FsDriver extends Driver {
   /** The repo configuration. */
   #config: FsConfig;
   /** Full path to the config file, if any. */
   #configFile: string | undefined;
+  /** Full file-system path to the data directory. */
+  #dataPath = "";
   /** Full path to an index file, if any. */
   #indexFile: string | undefined;
-  /** Depth of the root children in the absolute fs {@link #rootPath}. */
+  /** Depth of the root children in the absolute fs {@link #dataPath}. */
   #rootChildDepth = 0;
-  /** Full root file-system path. */
-  #rootPath = "";
 
-  #transactions: Transactions = { queue: [] };
+  #transactions = createTransactions();
 
   constructor(
     props: DriverProps,
     optionsOrConfigPath: string | FsDriverOptions,
   ) {
-    const { config, configFile, rootPath, indexFile } =
+    const { config, configFile, dataPath, indexFile } =
       openConfig(optionsOrConfigPath);
     super(props);
 
+    const { config: repoConfig } = props;
+    repoConfig.host.dataPath = dataPath;
+
     // Set object name for the default `toString` implementation.
-    (this as any)[Symbol.toStringTag] = `FsDriver("${rootPath}")`;
-    this.#rootChildDepth = rootPath.split(Path.sep).length;
-    this.#rootPath = rootPath;
+    (this as any)[Symbol.toStringTag] = `FsDriver("${dataPath}")`;
+
     this.#config = config;
     this.#configFile = configFile;
+    this.#dataPath = dataPath;
     if (indexFile) {
       this.#indexFile = indexFile;
     }
-  }
-
-  override get rootPath() {
-    return this.#rootPath;
+    this.#rootChildDepth = dataPath.split(Path.sep).length;
+    this.commands.register(fsCommands);
   }
 
   // #region -- Lifecycle
@@ -95,12 +101,12 @@ export class FsDriver extends Driver {
    * from the {@link Config.ids} file, if any.
    */
   override async onOpen() {
-    await this.fileTree.build(async (files) => {
+    await this.files.build(async (files) => {
       const rootChildDepth = this.#rootChildDepth;
-      const rootPath = this.#rootPath;
+      const dataPath = this.#dataPath;
       const fileTypes = this.fileTypes;
       // Make sure the path exists and that it's a directory.
-      await FSP.mkdir(rootPath, { recursive: true }).catch(
+      await FSP.mkdir(dataPath, { recursive: true }).catch(
         (err: NodeJS.ErrnoException) => {
           if (err.code === "EEXIST") {
             throw new Error(`Expected FsDriver path to be a directory.`);
@@ -118,7 +124,7 @@ export class FsDriver extends Driver {
           // directories but only some files...
           "**/*",
           {
-            cwd: rootPath,
+            cwd: dataPath,
             dot: true,
             // ignore: ["node_modules/**"],
             stat: true,
@@ -184,7 +190,7 @@ export class FsDriver extends Driver {
           dirsByPath.set(pathFromRoot, node);
         }
       }
-      files.rid = indexFileData?.rid ?? this.fileTree.createShortId(16);
+      files.rid = indexFileData?.rid ?? this.files.createShortId(16);
     });
   }
 
@@ -199,60 +205,22 @@ export class FsDriver extends Driver {
   }
 
   async #writeIndexIfSet() {
-    const { fileTree } = this;
+    const { files } = this;
     const indexFile = this.#indexFile;
     if (!indexFile) {
       return;
     }
     const nodeIds: FsIndexData["node"] = {};
     const indexFileData: FsIndexData = {
-      rid: fileTree.rid,
+      rid: files.rid,
       node: nodeIds,
     };
-    for (const node of fileTree) {
-      const path = fileTree.path(node)!;
+    for (const node of files) {
+      const path = files.path(node)!;
       nodeIds[path] = node.id;
     }
     const json = JSON.stringify(indexFileData, undefined, 2);
     await FSP.writeFile(indexFile, json);
-  }
-  // #endregion
-  // #region -- Core
-
-  /** Returns the full native path to the given relative node path. */
-  #fullPath(nodePath: string) {
-    return Path.join(this.#rootPath, nodePath);
-  }
-  /** Creates a transaction to prevent overlapped calls on the same driver. */
-  #transaction<T>(cb: TransactionCallback<T>): Promise<T> {
-    let onReject: (reason?: any) => void;
-    let onResolve: (value: T | PromiseLike<T>) => void;
-    const completed = new Promise<T>((resolve, reject) => {
-      onResolve = resolve;
-      onReject = reject;
-    });
-    const transaction = async () => {
-      let err: any | undefined;
-      let result: any | undefined;
-      try {
-        result = cb();
-      } catch (ex) {
-        err = ex;
-      }
-      if (result && typeof result.then === "function") {
-        result.then(onResolve).catch(onReject);
-      } else if (err) {
-        onReject(err);
-      } else {
-        onResolve(result);
-      }
-    };
-    const transactions = this.#transactions;
-    transactions.queue.push(transaction);
-    if (!transactions.running) {
-      runTransactions(transactions);
-    }
-    return completed;
   }
   // #endregion
   // #region -- Diagnostics
@@ -261,136 +229,49 @@ export class FsDriver extends Driver {
     return (this as any)[Symbol.toStringTag];
   }
   // #endregion
-  // #region -- FS Actions
-  /** Add a directory or a file with data. */
-  async add(
-    params: TransactionParams["add"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return this.#transaction(async () => {
-      const { to, data } = params;
-      // CONSIDER: Do we need isDir/isFile signaling for the caller here?
-      const isDir = !("data" in params);
-      const toPath = this.#fullPath(to);
-      console.log("[FS] add", to);
-      if (isDir) {
-        // Add directory
-        await FSP.mkdir(toPath, { recursive: true });
-      } else {
-        const toPathParent = Path.dirname(toPath);
-        await FSP.mkdir(toPathParent, { recursive: true });
-        // Add file
-        const json = JSON.stringify(data, undefined, 2);
-        await FSP.writeFile(toPath, json);
+  // #region -- Commands
+
+  async exec<CN extends CommandName | (string & Omit<string, CommandName>)>(
+    commandName: CN,
+    params: CommandParams<CN>,
+    props: ExecCommandProps,
+  ): Promise<CommandResult<CN>> {
+    console.log(`[FS] Exec ${commandName}`, params);
+    return this.#transactions.add(async () => {
+      const cmd = this.commands.get(commandName);
+      if (!cmd) {
+        throw new Error(`Command not found "${commandName}".`);
       }
-      const stats = await FSP.stat(toPath);
-      const target = this.fileTree.add(
-        to,
-        isDir ? { stats } : { data, stats },
-        out,
+      return cmd(
+        {
+          config: props.config,
+          files: this.files,
+          fileTypes: this.fileTypes,
+        },
+        params,
       );
-      return target;
-    });
-  }
-  /** Move or rename a file/directory.  */
-  async copy(
-    { from, fromEntry, to }: TransactionParams["copy"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return this.#transaction(async () => {
-      const fromPath = this.#fullPath(from);
-      const toPath = this.#fullPath(to);
-      console.log("[FS] cp", from, to);
-      await FSP.cp(fromPath, toPath, {
-        preserveTimestamps: true,
-        recursive: true,
-      });
-      const stats = await FSP.stat(toPath);
-      const target = this.fileTree.copy(fromEntry, to, { stats }, out);
-      return target;
-    });
-  }
-  /** Move or rename a file/directory.  */
-  async get(
-    { from, fromEntry }: TransactionParams["get"],
-    // out?: TransactionOutParams,
-  ): Promise<{ entry: Entry; data: unknown }> {
-    return this.#transaction(async () => {
-      const fromPath = this.#fullPath(from);
-      const stats = await FSP.stat(fromPath);
-      if (fromEntry.ctime !== stats.ctime.getTime()) {
-        console.warn(`Error: The ctime in memory != fs "${fromPath}".`);
-        // CONSIDER: Trigger FsWatcher change when FsWatcher feature exists.
-        // - We would also have to return an updated entry.
-      }
-      console.log("READING", fromPath);
-      const jsonText = (await FSP.readFile(fromPath)).toString();
-      const jsonData = JSON.parse(jsonText);
-      this.fileTree.setData(fromEntry, jsonData);
-      return {
-        entry: fromEntry,
-        data: jsonData,
-      };
-    });
-  }
-  /** Move or rename a file/directory.  */
-  async move(
-    { from, fromEntry, to }: TransactionParams["move"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return this.#transaction(async () => {
-      const fromPath = this.#fullPath(from);
-      const toPath = this.#fullPath(to);
-      const toPathParent = Path.dirname(toPath);
-      console.log("[FS] mv", from, to);
-      await FSP.mkdir(toPathParent, { recursive: true });
-      await FSP.rename(fromPath, toPath);
-      const stats = await FSP.stat(toPath);
-      const target = this.fileTree.move(fromEntry, to, { stats }, out);
-      return target;
-    });
-  }
-  /** Remove a file/directory. */
-  async remove(
-    { from, fromEntry }: TransactionParams["remove"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return this.#transaction(async () => {
-      const fullPath = this.#fullPath(from);
-      console.log("[FS] rm", from);
-      await FSP.rm(fullPath, { recursive: true });
-      const target = this.fileTree.remove(fromEntry, out);
-      return target;
-    });
-  }
-  /** Write to a file. */
-  async write(
-    { data, to, toEntry, patch }: TransactionParams["write"],
-    out?: TransactionOutParams,
-  ): Promise<Entry> {
-    return this.#transaction(async () => {
-      const json = JSON.stringify(data, undefined, 2);
-      const fullPath = this.#fullPath(to);
-      console.log("[FS] write", to);
-      await FSP.writeFile(fullPath, json);
-      const stats = await FSP.stat(fullPath);
-      const target = this.fileTree.write(toEntry, { data, stats, patch }, out);
-      return target;
     });
   }
   // #endregion
 }
+// #region -- Diagnostics
 
 // Set object name for the default `toString` implementation.
 (FsDriver as any)[Symbol.toStringTag] = "FsDriver";
 
-function createFsDriver<FT extends FileTypes<FT>>(
+// #endregion
+// #region -- Driver Factory
+
+function createFsDriver(
   props: DriverProps,
   optionsOrConfigPath: string | FsDriverOptions,
 ): FsDriver {
   return new FsDriver(props, optionsOrConfigPath);
 }
 registerDriver("fs", createFsDriver);
+
+// #endregion
+// #region -- Config
 
 function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
   const options =
@@ -403,7 +284,7 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
   const configDir = configFile ? Path.dirname(configFile) : undefined;
   // Get or create config.
   let config: FsConfig = {
-    root: "./data",
+    data: "./data",
     ...configDefaults,
   };
   let indexFile = config?.index;
@@ -426,9 +307,9 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
     indexFile = Path.resolve(indexFile);
   }
   // Get the main data path, ensure it exists.
-  const rootPath = configDir
-    ? Path.join(configDir, config.root)
-    : Path.resolve(config.root);
+  const dataPath = configDir
+    ? Path.join(configDir, config.data)
+    : Path.resolve(config.data);
   return {
     /** The loaded {@link FsConfig}. */
     config,
@@ -439,23 +320,121 @@ function openConfig(optionsOrConfigPath: string | FsDriverOptions) {
     /** Full path to the configured index file, if any. */
     indexFile,
     /** Full path to the root data directory. */
-    rootPath,
+    dataPath,
   };
 }
+// #endregion
 
-async function runTransactions(transactions: Transactions) {
-  transactions.running = true;
-  const { queue } = transactions;
-  while (queue.length > 0) {
-    const transaction = queue.shift()!;
-    await transaction();
-  }
-  transactions.running = false;
-}
-
-type TransactionCallback<T = any> = () => Promise<T>;
-
-interface Transactions {
-  running?: boolean;
-  queue: TransactionCallback[];
-}
+const fsCommands = [
+  command("fs.add", async function fsAdd({ config, files }, params) {
+    const { to, data } = params;
+    // CONSIDER: Do we need isDir/isFile signaling for the caller here?
+    const isDir = !("data" in params);
+    const toPath = hostDataPath(config, to);
+    console.log("[FS] add", to);
+    if (isDir) {
+      // Add directory
+      await FSP.mkdir(toPath, { recursive: true });
+    } else {
+      const toPathParent = Path.dirname(toPath);
+      await FSP.mkdir(toPathParent, { recursive: true });
+      // Add file
+      const json = JSON.stringify(data, undefined, 2);
+      await FSP.writeFile(toPath, json);
+    }
+    const stats = await FSP.stat(toPath);
+    const target = files.add(to, isDir ? { stats } : { data, stats });
+    return { id: target.id };
+  }),
+  command("fs.copy", async function fsCopy({ config, files }, { from, to }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostDataPath(config, from);
+    const toPath = hostDataPath(config, to);
+    console.log("[FS] cp", from, to);
+    await FSP.cp(fromPath, toPath, {
+      preserveTimestamps: true,
+      recursive: true,
+    });
+    const stats = await FSP.stat(toPath);
+    const target = files.copy(fromEntry, to, { stats });
+    return { id: target.id };
+  }),
+  command("fs.get", async function fsGet({ config, files }, { from }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostDataPath(config, from);
+    const stats = await FSP.stat(fromPath);
+    if (fromEntry.ctime !== stats.ctime.getTime()) {
+      console.warn(`Error: The ctime in memory != fs "${fromPath}".`);
+      // CONSIDER: Trigger FsWatcher change when FsWatcher feature exists.
+      // - We would also have to return an updated entry.
+    }
+    console.log("READING", fromPath);
+    const jsonText = (await FSP.readFile(fromPath)).toString();
+    const jsonData = JSON.parse(jsonText);
+    files.setData(fromEntry, jsonData);
+    return {
+      id: fromEntry.id,
+      data: jsonData,
+    };
+  }),
+  command("fs.move", async function fsMove({ config, files }, { from, to }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fromPath = hostDataPath(config, from);
+    const toPath = hostDataPath(config, to);
+    const toPathParent = Path.dirname(toPath);
+    console.log("[FS] mv", from, to);
+    await FSP.mkdir(toPathParent, { recursive: true });
+    await FSP.rename(fromPath, toPath);
+    const stats = await FSP.stat(toPath);
+    const target = files.move(fromEntry, to, { stats });
+    return { id: target.id };
+  }),
+  command("fs.remove", async function fsRemove({ config, files }, { from }) {
+    const { entry: fromEntry } = files.entry(from);
+    const fullPath = hostDataPath(config, from);
+    console.log("[FS] rm", from);
+    await FSP.rm(fullPath, { recursive: true });
+    const target = files.remove(fromEntry);
+    return { id: target.id };
+  }),
+  command(
+    "fs.write",
+    async function fsWrite({ config, files }, { to, data, ctime, patch }) {
+      const { entry: toEntry, data: origData } = files.fileEntry(to);
+      // Apply patch?
+      if (patch && typeof data === "undefined") {
+        console.log("[FS] Applying patch...");
+        if (typeof origData === "undefined") {
+          // CONSIDER: Just try and read the file here? Probably a bad idea...
+          throw new Error(`Entry missing data, cannot patch "${to}".`);
+        }
+        if (ctime !== toEntry.ctime) {
+          // TODO: Don't JUST throw an error here. Instead, figure out if the
+          // patches are compatible and apply them OR throw a typed error so the
+          // caller can handle it.
+          throw new Error(`Entry out-of-sync, cannot patch "${to}".`);
+        }
+        // CONSIDER: origData could be null...
+        data = applyPatch(origData!, patch);
+      }
+      // Overwriting?
+      if (!patch) {
+        if (ctime !== toEntry.ctime) {
+          throw new Error(`Entry out-of-sync, cannot overwrite "${to}".`);
+        }
+      }
+      // Write data
+      const json = JSON.stringify(data, undefined, 2);
+      const fullPath = hostDataPath(config, to);
+      console.log("[FS] write", to);
+      await FSP.writeFile(fullPath, json);
+      const stats = await FSP.stat(fullPath);
+      const target = files.write(toEntry, {
+        data,
+        stats,
+        patch,
+      });
+      return { id: target.id };
+    },
+  ),
+];
