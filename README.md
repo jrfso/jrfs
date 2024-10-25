@@ -15,7 +15,8 @@ This is a work in progress.
 
 <details>
 <summary>
-Describe your file types onto an interface <code>ProjectFileTypes</code>.
+Describe your file types onto an interface
+<em>(</em><code>ProjectFileTypes</code> <em>here)</em>.
 </summary>
 
 ```ts
@@ -82,8 +83,7 @@ export class ProjectRepo extends Repository<ProjectFileTypes> {
 </details>
 <details>
 <summary>
-Use the <code>ProjectRepo</code> to access your <code>fs</code> in your
-Node server.
+Use your <code>ProjectRepo</code> to access host files in your Node server.
 </summary>
 
 ```ts
@@ -101,8 +101,7 @@ await repo.fs.rename("backend/db/main/_.db.json", "my.db.json");
 </details>
 <details>
 <summary>
-Serve your <code>ProjectRepo</code> to a <code>WebDriver</code> client over
-web sockets.
+Serve your repo to browsers over web sockets.
 </summary>
 
 ```ts
@@ -126,8 +125,7 @@ function registerSockets(repo: ProjectRepo) {
 </details>
 <details>
 <summary>
-Create a matching <code>ProjectRepo</code> to access your <code>fs</code> in
-the browser.
+Create a <code>ProjectRepo</code> client class to access files in the browser.
 </summary>
 
 ```ts
@@ -177,7 +175,7 @@ await repo.git.commit({ message: "Testing..." });
 ```
 
 <details>
-<summary>You can also make plugins to add custom commands.</summary>
+<summary>Make a plugin to declare and expose custom commands.</summary>
 
 ```ts
 import { CommandType, PluginType, registerPlugin } from "@jrfs/core";
@@ -242,14 +240,18 @@ export default registerPlugin("git", function registerGitPlugin({ repo }) {
 
 <details>
 <summary>
-On your server, the same plugin can register custom command implementations.
+The server implementation of your plugin can register command implementations.
 </summary>
 
 ```ts
+import { simpleGit } from "simple-git";
 import { command, registerPlugin } from "@jrfs/core";
 import registerGitPluginShared from "demo-shared/jrfs/git";
-// import { simpleGit } from "simple-git";
 
+/**
+ * Command implementations may be registered on any layer (client/server).
+ * Drivers are responsible for executing commands or forwarding them.
+ */
 const gitCommands = [
   command("git.add", async function gitAdd({ files, fileTypes }, params) {
     // TODO: Run git.add via simple-git...
@@ -265,8 +267,10 @@ const gitCommands = [
   }),
 ];
 
-export default registerPlugin("git", function registerGitPlugin(props, params) {
+registerPlugin("git", function registerGitPlugin(props, params) {
+  // Call our shared plugin setup to declare and expose custom commands.
   registerGitPluginShared(props, params);
+  // Register the actual command implementations..
   const { config, commands /*,repo*/ } = props;
   console.log("[GIT] Registering plugin host commands...");
   commands.register(gitCommands);
