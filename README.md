@@ -171,6 +171,9 @@ await repo.fs.write<"db">("backend/db/main/_.db.json", (data) => {
 });
 
 await repo.fs.rename("backend/db/main/_.db.json", "my.db.json");
+
+// Call a plugin's custom command (from next example)...
+await repo.git.commit({ message: "Testing..." });
 ```
 
 <details>
