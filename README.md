@@ -2,9 +2,8 @@
 
 **JSON + Resources File System**
 
-**JRFS** is a `[transactional|queryable|collaborative|caching]`
-
-**File System** access library with _customizable_
+**JRFS** is a `[transactional|queryable|collaborative|caching]` **File System**
+access library with _customizable_
 `[drivers|plugins|commands|file types|schemas]`
 
 ## Current Status
