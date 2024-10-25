@@ -4,11 +4,11 @@
 
 **JRFS** is a `[transactional|queryable|collaborative|caching]` **File System**
 access library with _customizable_
-`[drivers|plugins|commands|file types|schemas]`
+`[drivers|plugins|commands|file types|schemas]`.
 
 ## Current Status
 
-**Alpha** :: _Experimental_ :: _"Works for local dev, no security!"_
+**ALPHA** :: Experimental :: _"Works for local dev, no security!"_
 
 ### Work in Progress
 
@@ -126,7 +126,7 @@ Serve the host file system to browsers over web sockets.
 <br />
 <p><em>
 Using our lightweight ws integration... Other libraries and 
-channel-types (e.g. REST/gRPC) are also possible.
+channel-types are also possible (e.g. REST/gRPC).
 </em></p>
 
 ```ts
