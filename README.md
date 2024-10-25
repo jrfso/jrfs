@@ -1,17 +1,24 @@
 # JRFS
 
-**JSON + Resources File System library**
+**JSON + Resources File System**
 
-JRFS is a (transactional, queryable, collaborative, caching) file system with
-customizable drivers, plugins, commands, file types and schemas.
+**JRFS** is a `[transactional|queryable|collaborative|caching]`
+
+**File System** access library with _customizable_
+`[drivers|plugins|commands|file types|schemas]`
 
 ## Current Status
 
-_Alpha - Experimental - It works for local dev so far..._
+**Alpha** :: _Experimental_ :: _"Works for local dev, no security!"_
 
-This is a work in progress.
+### Work in Progress
 
-## Things You Can Do
+- Dogfooding the current version `0.3.0` in a planned product.
+- Developing `simple-git` based git integration.
+- Planning a system of `Views` or "live queries" to allow developers to easily
+  observe file listings and/or data in aggregate.
+
+## Things You Can Do With JRFS
 
 <details>
 <summary style="user-select:none">
@@ -195,6 +202,13 @@ await repo.fs.rename("backend/db/main/_.db.json", "my.db.json");
 
 // Call a custom plugin command... (see plugin commands demo)
 await repo.git.commit({ message: "Testing..." });
+
+// Find all files that match a registered file type along with the
+// data that's been retrieved and cached in memory for that file.
+const files = await repo.findTypes("db");
+for (const { node, data } of nodes) {
+  console.log("FOUND", node.name, "{ id:", [node.id], "} =", data);
+}
 ```
 
 <details>
