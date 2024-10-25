@@ -6,8 +6,8 @@
 access library with _customizable_
 `[drivers|plugins|commands|file types|schemas]`.
 
-It lets your designer/developer frontend access and command local files via your
-custom devserver.
+It lets your designer/developer frontend easily access and command local files
+via your custom devserver.
 
 ## For local development tools
 
