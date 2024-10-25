@@ -141,11 +141,11 @@ class ProjectRepo extends Repository<ProjectFileTypes> {
   constructor() {
     super({
       driver: "web",
+      fileTypes: new TypeboxFileTypes<ProjectFileTypes>().set(ProjectFileTypes),
       web: {
         client,
         fileCache: createFileCache(),
       },
-      fileTypes: new TypeboxFileTypes<ProjectFileTypes>().set(ProjectFileTypes),
     });
     (this as any)[Symbol.toStringTag] = `ProjectRepo("/project/repo/")`;
   }
@@ -170,12 +170,17 @@ await repo.fs.write<"db">("backend/db/main/_.db.json", (data) => {
 
 await repo.fs.rename("backend/db/main/_.db.json", "my.db.json");
 
-// Call a plugin's custom command (from next example)...
+// Call a custom plugin command... (see plugin commands demo)
 await repo.git.commit({ message: "Testing..." });
 ```
 
 <details>
-<summary>Make a plugin to declare and expose custom commands.</summary>
+<summary>
+Make a plugin to <em>DECLARE</em> and <strong>expose</strong> some custom
+commands...
+</summary>
+
+<p><em>...but not implement them (yet).</em></p>
 
 ```ts
 import { CommandType, PluginType, registerPlugin } from "@jrfs/core";
@@ -240,8 +245,13 @@ export default registerPlugin("git", function registerGitPlugin({ repo }) {
 
 <details>
 <summary>
-The server implementation of your plugin can register command implementations.
+The <em>server</em> module of your plugin can register command implementations.
 </summary>
+
+<br />
+<p><em>
+NOTE: Commands can be implemented anywhere (client, server, library).
+</em></p>
 
 ```ts
 import { simpleGit } from "simple-git";
