@@ -1,8 +1,8 @@
-# JRFS
+# JrFS
 
-**JSON Resources File System library**
+**JSON + resources File System**
 
-JRFS is a (transactional, queryable, websocket accessible, collaborative,
+JrFS is a (transactional, queryable, websocket accessible, collaborative,
 caching) file system with customizable driver and file type providers.
 
 ## Current Status

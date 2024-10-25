@@ -1,7 +1,7 @@
 {
   "name": "@jrfs/ws",
   "version": "0.3.0",
-  "description": "JRFS ws integration.",
+  "description": "JrFS ws integration.",
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/ws",
   "keywords": [

@@ -106,9 +106,9 @@ api.register(fastSwagger, {
   // stripBasePath: true,
   openapi: {
     info: {
-      title: "JRFS Demo Server",
+      title: "JrFS Demo Server",
       description:
-        "API for the JRFS Demo Server." +
+        "API for the JrFS Demo Server." +
         (__DEV__
           ? "\n\nDevelopers, see also [Fastify reference](https://www.fastify.io/docs/latest/Reference/)."
           : ""),
@@ -117,7 +117,7 @@ api.register(fastSwagger, {
     // servers: [{ url: `http://localhost:${PORT}` }],
     externalDocs: {
       url: "https://github.com/jrfs/jrfs",
-      description: "About JRFS",
+      description: "About JrFS",
     },
     tags: commonSchemas.tags,
     // components: {
@@ -135,9 +135,9 @@ api.register(fastSwagger, {
   // swagger: {
   //   // basePath: "/api/v1",
   //   info: {
-  //     title: "JRFS Demo Server",
+  //     title: "JrFS Demo Server",
   //     description:
-  //       "API for the JRFS Demo Server." +
+  //       "API for the JrFS Demo Server." +
   //       (__DEV__
   //         ? "\n\nDevelopers, see also [Fastify reference](https://www.fastify.io/docs/latest/Reference/)."
   //         : ""),

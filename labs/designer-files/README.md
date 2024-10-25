@@ -1,6 +1,6 @@
 # Designer Files
 
-This lab contains a `design/src` folder that can be edited by the JRFS demo-app.
+This lab contains a `design/src` folder that can be edited by the JrFS demo-app.
 
 ## Scenario
 

@@ -1,6 +1,6 @@
-# JRFS Demo App
+# JrFS Demo App
 
-JRFS demo frontend app.
+JrFS demo frontend app.
 
 ## React + TypeScript + Vite
 

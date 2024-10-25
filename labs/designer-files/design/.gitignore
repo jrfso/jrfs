@@ -1,6 +1,6 @@
 # See https://help.github.com/articles/ignoring-files/ for help.
 
-# JRFS
+# JrFS
 # .jrfs/**/*.idx.json
 
 # Dependencies

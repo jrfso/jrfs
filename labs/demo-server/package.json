@@ -2,7 +2,7 @@
   "name": "demo-server",
   "private": true,
   "version": "0.3.0",
-  "description": "JRFS demo server",
+  "description": "JrFS demo server",
   "license": "MIT",
   "type": "module",
   "bin": {

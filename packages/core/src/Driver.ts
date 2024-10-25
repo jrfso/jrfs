@@ -14,7 +14,7 @@ import { type CreateShortIdFunction } from "@/helpers";
 import { INTERNAL } from "@/internal/types";
 import { WritableFileTree } from "@/WritableFileTree";
 
-/** Base JRFS driver class. */
+/** Base JrFS driver class. */
 export abstract class Driver {
   #commands: CommandRegistry;
   #createShortId: CreateShortIdFunction;

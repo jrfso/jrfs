@@ -1,8 +1,8 @@
-# JRFS
+# JrFS
 
-**JSON + Resources File System**
+**JSON + resources File System**
 
-**JRFS** is a `[transactional|queryable|collaborative|caching]` **File System**
+**JrFS** is a `[transactional|queryable|collaborative|caching]` **File System**
 access library with _customizable_
 `[drivers|plugins|commands|file types|schemas]`.
 
@@ -17,7 +17,7 @@ access library with _customizable_
 - Planning a system of `Views` or "live queries" to allow developers to easily
   observe file listings and/or data in aggregate.
 
-## Things You Can Do With JRFS
+## Things You Can Do With JrFS
 
 <details>
 <summary style="user-select:none">

@@ -1,7 +1,7 @@
 {
   "name": "@jrfs/idb",
   "version": "0.3.0",
-  "description": "JRFS idb file cache.",
+  "description": "JrFS idb file cache.",
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/idb",
   "keywords": [

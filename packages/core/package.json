@@ -1,7 +1,7 @@
 {
   "name": "@jrfs/core",
   "version": "0.3.0",
-  "description": "JRFS core library.",
+  "description": "JrFS core library.",
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/core",
   "keywords": [

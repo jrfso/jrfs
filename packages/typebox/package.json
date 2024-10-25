@@ -1,7 +1,7 @@
 {
   "name": "@jrfs/typebox",
   "version": "0.3.0",
-  "description": "JRFS TypeBox integration.",
+  "description": "JrFS TypeBox integration.",
   "repository": "github:jrfso/jrfs",
   "homepage": "https://github.com/jrfso/jrfs/tree/master/packages/typebox",
   "keywords": [

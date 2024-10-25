@@ -15,7 +15,7 @@ export async function main() {
       `(version: ${PKG_VER}, env: ${NODE_ENV}, port: ${PORT})...`,
   );
   if (__DEV__) {
-    console.log(`${chalk.greenBright("JRFS Demo Server")} - Welcome!`);
+    console.log(`${chalk.greenBright("JrFS Demo Server")} - Welcome!`);
   }
   // TODO: Better CLI options parsing...
   await projectService.openRepo(process.argv[2] ?? "");

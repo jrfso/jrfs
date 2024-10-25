@@ -1,3 +1,3 @@
-# JRFS Demo Server
+# JrFS Demo Server
 
 Explainer coming soon...

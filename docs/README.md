@@ -1,4 +1,4 @@
-# JRFS Documentation
+# JrFS Documentation
 
 - [Home](../README.md)
   - [Labs](../labs/README.md)
