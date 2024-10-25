@@ -6,6 +6,15 @@
 access library with _customizable_
 `[drivers|plugins|commands|file types|schemas]`.
 
+It lets your designer/developer frontend access and command local files via your
+custom devserver.
+
+## For local development tools
+
+Version 1.0 of this library is being designed specifically for local-first
+developer tools that need more than the standard browser File System API but
+less than a full-blown Electron/Chromium installation.
+
 ## Current Status
 
 **ALPHA** :: Experimental :: _"Works for local dev, no security!"_
