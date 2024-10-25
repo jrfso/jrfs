@@ -14,10 +14,12 @@ This is a work in progress.
 ## Things You Can Do
 
 <details>
-<summary>
+<summary style="user-select:none">
 Describe your file types onto an interface
-<em>(</em><code>ProjectFileTypes</code> <em>here)</em>.
+[<code>ProjectFileTypes</code>].
 </summary>
+
+<p><em>&nbsp;</em></p>
 
 ```ts
 import type { FileTypeInfo } from "@jrfs/core";
@@ -59,10 +61,13 @@ ProjectFileTypes.db = DbDesignFile;
 ```
 
 </details>
+
 <details>
-<summary>
-Create a custom <code>Repository</code> class called <code>ProjectRepo</code>.
+<summary style="user-select:none">
+Create a custom <code>Repository</code> class called [<code>ProjectRepo</code>].
 </summary>
+
+<p><em>&nbsp;</em></p>
 
 ```ts
 import { Repository } from "@jrfs/node";
@@ -81,10 +86,17 @@ export class ProjectRepo extends Repository<ProjectFileTypes> {
 ```
 
 </details>
+
 <details>
-<summary>
-Use your <code>ProjectRepo</code> to access host files in your Node server.
+<summary style="user-select:none">
+Use your repo to access host files in your Node program.
 </summary>
+
+<br />
+<p><em>
+NOTE: Please open a discussion if you're interested in helping with a
+compatible Go or Rust library!
+</em></p>
 
 ```ts
 const repo = new ProjectRepo(absoluteConfigFilePath);
@@ -99,10 +111,17 @@ await repo.fs.rename("backend/db/main/_.db.json", "my.db.json");
 ```
 
 </details>
+
 <details>
-<summary>
-Serve your repo to browsers over web sockets.
+<summary style="user-select:none">
+Serve the host file system to browsers over web sockets.
 </summary>
+
+<br />
+<p><em>
+Using our lightweight ws integration... Other libraries and 
+channel-types (e.g. REST/gRPC) are also possible.
+</em></p>
 
 ```ts
 import { createWsServer } from "@jrfs/ws";
@@ -123,13 +142,17 @@ function registerSockets(repo: ProjectRepo) {
 ```
 
 </details>
+
 <details>
-<summary>
-Create a <code>ProjectRepo</code> client class to access files in the browser.
+<summary style="user-select:none">
+Create a matching client <code>ProjectRepo</code> to connect from the browser.
 </summary>
 
+<br />
+<p><em>And sprinkle in an optional IndexedDB based file cache...</em></p>
+
 ```ts
-import { createWebClient, Repository } from "@jrfs/web";
+import { Repository, createWebClient } from "@jrfs/web";
 import { TypeboxFileTypes } from "@jrfs/typebox";
 import { createFileCache } from "@jrfs/idb";
 
@@ -175,12 +198,15 @@ await repo.git.commit({ message: "Testing..." });
 ```
 
 <details>
-<summary>
+<summary style="user-select:none">
 Make a plugin to <em>DECLARE</em> and <strong>expose</strong> some custom
 commands...
 </summary>
 
-<p><em>...but not implement them (yet).</em></p>
+<br />
+<p><em>
+...but implement them somewhere else, not here, in this example.
+</em></p>
 
 ```ts
 import { CommandType, PluginType, registerPlugin } from "@jrfs/core";
@@ -241,10 +267,11 @@ export default registerPlugin("git", function registerGitPlugin({ repo }) {
   });
 });
 ```
+
 </details>
 
 <details>
-<summary>
+<summary style="user-select:none">
 The <em>server</em> module of your plugin can register command implementations.
 </summary>
 
@@ -287,6 +314,7 @@ registerPlugin("git", function registerGitPlugin(props, params) {
   config.host.gitPath = findUpGitPath(config.host.dataPath);
 });
 ```
+
 </details>
 
 ## Overview
