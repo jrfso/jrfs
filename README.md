@@ -366,9 +366,9 @@ flowchart TD;
   end
   subgraph DRC [" "]
     direction TB;
-    DRC1@{ shape: text, label: "<small>{ ***wraps*** *Repo.FileTree* } --></small>" }
+    DRC1@{ shape: text, label: "<small>{ ***wraps*** *Repo.FileTree* }</small>" }
     WFT("WritableFileTree");
-    DRC2@{ shape: text, label: "<small>{ ***writes*** *Repo.FileTree* } --^</small>" }
+    DRC2@{ shape: text, label: "<small>{ ***writes*** *Repo.FileTree* }</small>" }
   end
   Opt --> Repo;
   Repo --> |"&nbsp; creates &nbsp;"| DR;
