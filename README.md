@@ -370,7 +370,7 @@ flowchart TD;
     WFT("WritableFileTree");
     DRC2@{ shape: text, label: "*writes FileTree*" }
   end
-  Opt --> Repo;
+  Opt --> |"&nbsp; configure &nbsp;"| Repo;
   Repo --> |"&nbsp; creates &nbsp;"| DR;
   DR --> |"&nbsp; creates &nbsp;"| DRC;
 ```
