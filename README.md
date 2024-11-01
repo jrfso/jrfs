@@ -345,36 +345,34 @@ Here's an overview of how the innards of this beast work.
 
 ```mermaid
 flowchart TD;
-    subgraph DI ["Driver"]
-        direction LR;
-        FSD("FsDriver");
-        SQL("SQLite*");
-        WBD("WebDriver");
-    end
-    subgraph FTS ["FileTree"]
-        direction LR;
-        FT("FileTree");
-        WFT("WritableFileTree");
-        WFT -->|writes| FT;
-    end
+  subgraph Opt ["Options"]
     RO1("driver
         [fs, sqlite*, web]");
     RO2("FileTypeProvider
         [@jrfs/typebox, zod, ...]");
     RO3("plugins
         [diff, git, zip, ...]");
-    RO{"_options_"} --> R;
-    RO1 -->RO;
-    RO2 -->RO;
-    RO3 -->RO;
-    R((("Repository"))) --> RC{"_creates_"};
-    RC --> RCfg("RepositoryConfig");
-    RC --> CmdReg("CommandsRegistry");
-    RC --> DI;
-    RC --> FT;
-    RC --> PI("Plugins");
-    DI --> |creates| WFT;
-
+  end
+  subgraph Repo ["Repository"]
+    CmdReg("CommandsRegistry");
+    FT("FileTree");
+    PI("Plugins");
+    RCfg("RepositoryConfig");
+  end
+  subgraph DR ["Driver"]
+    FSD("FsDriver");
+    SQL("SQLite*");
+    WBD("WebDriver");
+  end
+  subgraph DRC [" "]
+    direction TB;
+    DRC1@{ shape: text, label: "<small>{ ***wraps*** *Repo.FileTree* } --></small>" }
+    WFT("WritableFileTree");
+    DRC2@{ shape: text, label: "<small>{ ***writes*** *Repo.FileTree* } --^</small>" }
+  end
+  Opt --> Repo;
+  Repo --> |"&nbsp; creates &nbsp;"| DR;
+  DR --> |"&nbsp; creates &nbsp;"| DRC;
 ```
 
 _[*] The SQLite driver does not yet exist, but the others do!_
