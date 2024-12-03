@@ -9,6 +9,46 @@ access library with _customizable_
 It lets your designer/developer frontend easily access and command local files
 via your custom devserver.
 
+## How it works:
+
+```ts
+import { Repository } from "@jrfs/node"; // or "@jrfs/web";
+
+/** File types by name. (Declare here or augment elsewhere...) */
+interface ProjectFileTypes {
+  db: DbDesignFile; // See ./labs/demo-shared/src/features/db/
+}
+/** Create a typed repository for our project. */
+const repo = new Repository<ProjectFileTypes>({
+  driver: "fs",                     // "fs" | "web" (server | client)
+  fs: "/my/project/projectDb.json", // fs server config, points to data dir.
+  // web: { client, fileCache }     // web client options
+});
+
+await repo.open();
+
+// Write to a specific known file type.
+await repo.fs.write<"db">("backend/db/main/_.db.json", (data) => {
+  data.db.name = "main"; // <-- Autocompletes from DbDesignFile type
+  data.db.dialect = "mysql";
+});
+
+// Do an fs operation (add|copy|get|move|remove|rename)
+await repo.fs.rename("backend/db/main/_.db.json", "my.db.json");
+
+// Call a custom plugin command... (see plugin commands demo)
+await repo.git.commit({ message: "Testing..." });
+
+// Find all files that match a registered file type along with the
+// data that's been retrieved and cached in memory for that file.
+const files = await repo.findTypes("db");
+for (const { node, data } of nodes) {
+  console.log("FOUND", node.name, "{ id:", [node.id], "} =", data);
+}
+
+// More planned: Other types of data queries, aggregate views/commands.
+```
+
 ## For local development tools
 
 Version 1.0 of this library is being designed specifically for local-first
