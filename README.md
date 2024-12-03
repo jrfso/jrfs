@@ -9,7 +9,9 @@ access library with _customizable_
 It lets your designer/developer frontend easily access and command local files
 via your custom devserver.
 
-## How it works:
+## How it works
+
+The same-ish code works in the browser or Node...
 
 ```ts
 import { Repository } from "@jrfs/node"; // or "@jrfs/web";
